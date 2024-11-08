@@ -58,7 +58,7 @@
         <td align="center" width="150px">
             <a href="https://github.com/Superl3"><img height="80px" src="https://github.com/user-attachments/assets/3673ecc7-399b-42b0-9d94-cfcfd32d3864"/></a>
             <br />
-            <a href="hhttps://github.com/Superl3"><strong>성기훈</strong></a>
+            <a href="https://github.com/Superl3"><strong>성기훈</strong></a>
             <br />
         </td>
         <td align="center" width="150px">
