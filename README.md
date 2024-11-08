@@ -32,37 +32,37 @@
 <table>
     <tr height="160px">
         <td align="center" width="150px">
-            <a href="https://github.com/boyamie"><img height="100px"  src="https://github.com/user-attachments/assets/adeaf63c-a763-46df-bd49-1a0ce71098eb"></a>
+            <a href="https://github.com/boyamie"><img height="80px"  src="https://github.com/user-attachments/assets/adeaf63c-a763-46df-bd49-1a0ce71098eb"></a>
             <br/>
             <a href="https://github.com/boyamie"><strong>김보현</strong></a>
             <br />
         </td>
         <td align="center" width="150px">
-            <a href="https://github.com/Ja2Hw"><img height="100px"  src="https://github.com/user-attachments/assets/d824f102-e0a5-491d-9c75-cb90f625da3e"/></a>
+            <a href="https://github.com/Ja2Hw"><img height="80px"  src="https://github.com/user-attachments/assets/d824f102-e0a5-491d-9c75-cb90f625da3e"/></a>
             <br/>
             <a href="https://github.com/Ja2Hw"><strong>김재환</strong></a>
             <br />
         </td>
         <td align="center" width="150px">
-            <a href="https://github.com/Jin-SukKim"><img height="100px"  src="https://github.com/Eddie-JUB/Portfolio/assets/71426994/2829c82d-ecc8-49fd-9cb3-ae642fbe7513"/></a>
+            <a href="https://github.com/Jin-SukKim"><img height="80px"  src="https://github.com/Eddie-JUB/Portfolio/assets/71426994/2829c82d-ecc8-49fd-9cb3-ae642fbe7513"/></a>
             <br/>
             <a href="https://github.com/Jin-SukKim"><strong>김진석</strong></a>
             <br />
         </td>
         <td align="center" width="150px">
-            <a href="https://github.com/202250274"><img height="100px" src="https://github.com/user-attachments/assets/534a7596-2c95-4b89-867d-839a7728303c"/></a>
+            <a href="https://github.com/202250274"><img height="80px" src="https://github.com/user-attachments/assets/534a7596-2c95-4b89-867d-839a7728303c"/></a>
             <br />
             <a href="https://github.com/202250274"><strong>박진영</strong></a>
             <br />
         </td>
         <td align="center" width="150px">
-            <a href="https://github.com/Superl3"><img height="100px" src="https://github.com/user-attachments/assets/3673ecc7-399b-42b0-9d94-cfcfd32d3864"/></a>
+            <a href="https://github.com/Superl3"><img height="80px" src="https://github.com/user-attachments/assets/3673ecc7-399b-42b0-9d94-cfcfd32d3864"/></a>
             <br />
-            <a href="hhttps://github.com/Superl3"><strong>성기훈</strong></a>
+            <a href="https://github.com/Superl3"><strong>성기훈</strong></a>
             <br />
         </td>
         <td align="center" width="150px">
-              <a href="https://github.com/hocheol0303"><img height="100px"  src="https://github.com/user-attachments/assets/2d0a71c6-9752-43a8-b96e-bc3be06e5dde"/></a>
+              <a href="https://github.com/hocheol0303"><img height="80px"  src="https://github.com/user-attachments/assets/2d0a71c6-9752-43a8-b96e-bc3be06e5dde"/></a>
               <br />
               <a href="https://github.com/hocheol0303"><strong>양호철</strong></a>
               <br />
