@@ -1,12 +1,11 @@
 
 # 📖 Overview
-
-🚧 Work in Progress
+![](https://i.imgur.com/SqupAoR.png)
+Bone Segmentation은 인공지능 분야에서 중요한 응용 분야 중 하나로, 특히, 딥러닝 기술을 이용한 뼈 Segmentation은 많은 연구가 이루어지고 있으며, 다양한 목적으로 도움을 줄 수 있습니다.
 
 <br>
 
 ## 🗂 Dataset
-![](https://i.imgur.com/SqupAoR.png)
 - **Input :** hand bone x-ray 객체가 담긴 이미지가 모델의 인풋으로 사용됩니다. segmentation annotation은 json file로 제공됩니다.
 - **Output :** 모델은 각 픽셀 좌표에 따른 class를 출력하고, 이를 rle로 변환하여 리턴합니다. 이를 output 양식에 맞게 csv 파일을 만들어 제출합니다.
 <br><br>
