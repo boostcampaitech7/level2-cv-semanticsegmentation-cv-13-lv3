@@ -6,18 +6,17 @@
 <br>
 
 ## 🗂 Dataset
-![](https://i.imgur.com/SqupAoR.png)
-- **Input :** hand bone x-ray 객체가 담긴 이미지가 모델의 인풋으로 사용됩니다. segmentation annotation은 json file로 제공됩니다.
-- **Output :** 모델은 각 픽셀 좌표에 따른 class를 출력하고, 이를 rle로 변환하여 리턴합니다. 이를 output 양식에 맞게 csv 파일을 만들어 제출합니다.
+
+🚧 Work in Progress
+
+
 <br><br>
-- 전체 이미지 개수: 800장(Train), 288장(Test)
-- 크게 손가락 / 손등 / 팔로 구성되며, 총 29개의 class (뼈 종류)가 존재합니다.
+
+🚧 Work in Progress
 <br><br><br>
 
 ## 📃 Metric
-![image](https://github.com/user-attachments/assets/f77da0ea-caf8-4e15-a592-dab7f6c331b0)
-2 * (예측 영역 ∩ 실제 영역) / (예측 영역의 크기 + 실제 영역의 크기)인 DICE score는 예측된 영역과 실제 영역 간의 중첩 정도를 수치화하여 표현합니다. 
-이 공식은 두 영역이 완전히 일치할 때 최대값인 1을 갖고, 전혀 겹치지 않을 때 최소값인 0을 갖습니다.
+🚧 Work in Progress
 
 
 
@@ -45,7 +44,7 @@
             <br />
         </td>
         <td align="center" width="150px">
-            <a href="https://github.com/Jin-SukKim"><img height="80px"  src="https://github.com/user-attachments/assets/dd8d7dc7-6152-421d-9778-e4a9d7463896"/></a>
+            <a href="https://github.com/Jin-SukKim"><img height="80px"  src="https://github.com/Eddie-JUB/Portfolio/assets/71426994/2829c82d-ecc8-49fd-9cb3-ae642fbe7513"/></a>
             <br/>
             <a href="https://github.com/Jin-SukKim"><strong>김진석</strong></a>
             <br />
