@@ -24,6 +24,8 @@ class SegmentationModel(LightningModule):
         self.rles = []
         self.filename_and_class = []
 
+        self.save_hyperparameters()
+
     def forward(self, x):
         return self.model(x)
 
@@ -31,7 +33,7 @@ class SegmentationModel(LightningModule):
         _, images, masks = batch
         outputs = self(images)
         loss = self.criterion(outputs, masks)
-        self.log('train_loss', loss)
+        self.log('train/loss', loss, on_step=True, on_epoch=False)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -43,7 +45,7 @@ class SegmentationModel(LightningModule):
             outputs = F.interpolate(outputs, size=masks.shape[-2:], mode="bilinear")
 
         loss = self.criterion(outputs, masks)
-        self.log('val_loss', loss, prog_bar=True)
+        self.log('val/loss', loss, prog_bar=True, on_step=True, on_epoch=False)
 
         outputs = torch.sigmoid(outputs)
         outputs = (outputs > self.thr).detach().cpu()
@@ -59,18 +61,15 @@ class SegmentationModel(LightningModule):
         avg_dice = torch.mean(dices_per_class).item()
         
         # 로그와 체크포인트 저장을 위한 모니터링 지표로 사용
-        self.log('val_dice', avg_dice, prog_bar=True)
+        self.log('val/dice', avg_dice, prog_bar=True)
         
         if avg_dice > self.best_dice:
             self.best_dice = avg_dice
             print(f"Best performance improved: {self.best_dice:.4f}")
 
-        # 클래스별 Dice 출력
-        dice_str = [
-            f"{c:<12}: {d.item():.4f}"
-            for c, d in zip(CLASSES, dices_per_class)
-        ]
-        print("\n".join(dice_str))
+        # Log Dice scores per class using WandB logger
+        dice_scores_dict = {'val/' + c: d.item() for c, d in zip(CLASSES, dices_per_class)}
+        self.log_dict(dice_scores_dict, on_epoch=True, logger=True)  # Log to WandB at the end of each epoch
 
         # 에폭이 끝나면 validation_dices 초기화
         self.validation_dices.clear()

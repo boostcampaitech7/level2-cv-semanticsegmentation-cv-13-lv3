@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 from xraydataset import XRayDataset, split_data
 from utils import get_sorted_files_by_type
 
-from constants import TRAIN_DATA_DIR
+from constants import TRAIN_DATA_DIR, WANDB_PROJECT_NAME
 
 from argparse import ArgumentParser
 
@@ -13,19 +13,22 @@ import albumentations as A
 
 import os
 import torch
-import torch.nn.functional as F
 
 from model_lightning import SegmentationModel
 
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.loggers import WandbLogger
 
-from constants import IND2CLASS
- 
 # 모델 학습과 검증을 수행하는 함수
 def train_model(args):
 
     seed_everything(args.seed)
+
+    config = args.__dict__
+    run_name = config.pop('run_name', None)  # 'run_name'이 있으면 가져오고 없으면 None
+
+    wandb_logger = WandbLogger(project=WANDB_PROJECT_NAME, name=run_name, config=config)
 
     # model = models.segmentation.fcn_resnet50(pretrained=True)
     # # output class 개수를 dataset에 맞도록 수정합니다.
@@ -65,7 +68,7 @@ def train_model(args):
     checkpoint_callback = ModelCheckpoint(
         dirpath=args.checkpoint_dir,
         filename='fcn_resnet50_best_model',
-        monitor='val_dice',
+        monitor='val/dice',
         mode='max',
         save_top_k=3
     )
@@ -75,6 +78,8 @@ def train_model(args):
 
     # Trainer 설정
     trainer = Trainer(
+        logger=wandb_logger,
+        log_every_n_steps=5,
         max_epochs=args.max_epoch,
         check_val_every_n_epoch=args.valid_interval,
         callbacks=[checkpoint_callback],
@@ -94,7 +99,9 @@ def parse_args():
     
     parser.add_argument('--seed', type=int, default=42)
 
-    parser.add_argument('--batch_size', type=int, default=8)
+    parser.add_argument('--run_name', type=str)
+
+    parser.add_argument('--batch_size', type=int, default=20)
     parser.add_argument('--num_workers', type=int, default=8)
     
     parser.add_argument('--lr', type=float, default=1e-4)
@@ -103,8 +110,8 @@ def parse_args():
 
     # parser.add_argument("--amp", action="store_true", help="mixed precision")
  
-    parser.add_argument('--max_epoch', type=int, default=50)
-    parser.add_argument('--valid_interval', type=int, default=5)
+    parser.add_argument('--max_epoch', type=int, default=5)
+    parser.add_argument('--valid_interval', type=int, default=1)
 
     args = parser.parse_args()
 
