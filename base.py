@@ -24,6 +24,11 @@ CLASSES = [
     'Triquetrum', 'Pisiform', 'Radius', 'Ulna',
     ]
 
+def save_model(model, save_dir, file_name='best_model.pt'):
+    if not os.path.exists(save_dir):
+        os.makedirs(save_dir)
+    torch.save(model.state_dict(), os.path.join(save_dir, file_name))
+
 def save_eda_images(dataset, save_dir, num_examples=5):
     if not os.path.exists(save_dir):
         os.makedirs(save_dir)
