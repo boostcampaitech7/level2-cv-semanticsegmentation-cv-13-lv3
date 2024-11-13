@@ -13,3 +13,5 @@ IND2CLASS = {v: k for k, v in CLASS2IND.items()}
 
 TRAIN_DATA_DIR = '../train'
 TEST_DATA_DIR = '../test'
+
+WANDB_PROJECT_NAME = 'project4_test_run'

@@ -1,107 +1,122 @@
+# torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
 
-import torch
-from tqdm.auto import tqdm
+from xraydataset import XRayDataset, split_data
+from utils import get_sorted_files_by_type
 
+from constants import TRAIN_DATA_DIR, WANDB_PROJECT_NAME
 
-import datetime
+from argparse import ArgumentParser
+
+import albumentations as A
 
 import os
+import torch
 
-import torch.nn.functional as F
+from model_lightning import SegmentationModel
 
-from utils import dice_coef
+from lightning.pytorch import Trainer, seed_everything
+from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch.loggers import WandbLogger
 
-from constants import CLASSES
+# 모델 학습과 검증을 수행하는 함수
+def train_model(args):
 
-def save_model(model, checkpoint_path, file_name='fcn_resnet50_best_model.pt'):
-    if not os.path.exists(checkpoint_path):                                                           
-        os.makedirs(checkpoint_path)
-    output_path = os.path.join(checkpoint_path, file_name)
-    torch.save(model, output_path)
+    seed_everything(args.seed)
 
-def validation(epoch, model, data_loader, criterion, thr=0.5):
-    print(f'Start validation #{epoch:2d}')
-    model.eval()
+    config = args.__dict__
+    run_name = config.pop('run_name', None)  # 'run_name'이 있으면 가져오고 없으면 None
 
-    dices = []
-    with torch.no_grad():
-        total_loss = 0
-        cnt = 0
+    wandb_logger = WandbLogger(project=WANDB_PROJECT_NAME, name=run_name, config=config)
 
-        for step, (_, images, masks) in tqdm(enumerate(data_loader), total=len(data_loader)):
-            images, masks = images.cuda(), masks.cuda()         
-            model = model.cuda()
-            
-            outputs = model(images)#['out']
-            
-            output_h, output_w = outputs.size(-2), outputs.size(-1)
-            mask_h, mask_w = masks.size(-2), masks.size(-1)
-            
-            # gt와 prediction의 크기가 다른 경우 prediction을 gt에 맞춰 interpolation 합니다.
-            if output_h != mask_h or output_w != mask_w:
-                outputs = F.interpolate(outputs, size=(mask_h, mask_w), mode="bilinear")
-            
-            loss = criterion(outputs, masks)
-            total_loss += loss
-            cnt += 1
-            
-            outputs = torch.sigmoid(outputs)
-            outputs = (outputs > thr).detach().cpu()
-            masks = masks.detach().cpu()
-            
-            dice = dice_coef(outputs, masks)
-            dices.append(dice)
-                
-    dices = torch.cat(dices, 0)
-    dices_per_class = torch.mean(dices, 0)
-    dice_str = [
-        f"{c:<12}: {d.item():.4f}"
-        for c, d in zip(CLASSES, dices_per_class)
-    ]
-    dice_str = "\n".join(dice_str)
-    print(dice_str)
+    # model = models.segmentation.fcn_resnet50(pretrained=True)
+    # # output class 개수를 dataset에 맞도록 수정합니다.
+    # model.classifier[4] = nn.Conv2d(512, len(CLASSES), kernel_size=1)
+
+    image_root = os.path.join(TRAIN_DATA_DIR, 'DCM')
+    label_root = os.path.join(TRAIN_DATA_DIR, 'outputs_json')
+
+    pngs = get_sorted_files_by_type(image_root, 'png')
+    jsons = get_sorted_files_by_type(label_root, 'json')
+
+    train_files, valid_files = split_data(pngs, jsons)
+
+    train_dataset = XRayDataset(image_files=train_files['filenames'], label_files=train_files['labelnames'], transforms=A.Resize(args.input_size, args.input_size))
+    valid_dataset = XRayDataset(image_files=valid_files['filenames'], label_files=valid_files['labelnames'], transforms=A.Resize(args.input_size, args.input_size))
+
+    train_loader = DataLoader(
+        dataset=train_dataset, 
+        batch_size=args.batch_size,
+        shuffle=True,
+        num_workers=args.num_workers,
+        drop_last=True,
+    )
+    # 주의: validation data는 이미지 크기가 크기 때문에 `num_wokers`는 커지면 메모리 에러가 발생할 수 있습니다.
+    valid_loader = DataLoader(
+        dataset=valid_dataset, 
+        batch_size=2,
+        shuffle=False,
+        num_workers=7,
+        drop_last=False
+    )
+
+    # Loss function을 정의합니다.
+    criterion = nn.BCEWithLogitsLoss()
+
+    # 체크포인트 콜백 설정
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=args.checkpoint_dir,
+        filename='fcn_resnet50_best_model',
+        monitor='val/dice',
+        mode='max',
+        save_top_k=3
+    )
+
+    # 모델 초기화
+    seg_model = SegmentationModel(criterion=criterion, learning_rate=args.lr)
+
+    # Trainer 설정
+    trainer = Trainer(
+        logger=wandb_logger,
+        log_every_n_steps=5,
+        max_epochs=args.max_epoch,
+        check_val_every_n_epoch=args.valid_interval,
+        callbacks=[checkpoint_callback],
+        accelerator='gpu', 
+        devices=1 if torch.cuda.is_available() else None
+    )
+
+    # 학습 시작
+    trainer.fit(seg_model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
+
+
+def parse_args():
+    parser = ArgumentParser()
+
+    parser.add_argument('--checkpoint_dir', type=str,default="./checkpoints")
+    parser.add_argument('--checkpoint_file', type=str,default="fcn_resnet50_best_model.pt")
     
-    avg_dice = torch.mean(dices_per_class).item()
-    
-    return avg_dice
+    parser.add_argument('--seed', type=int, default=42)
 
-def train(model, train_loader, val_loader, criterion, optimizer, num_epochs, valid_interval, checkpoint_path):
-    print(f'Start training..')
-    
-    best_dice = 0.
-    
-    for epoch in range(num_epochs):
-        model.train()
+    parser.add_argument('--run_name', type=str)
 
-        for step, (_, images, masks) in enumerate(train_loader):     
-      
-            # gpu 연산을 위해 device 할당합니다.
-            images, masks = images.cuda(), masks.cuda()
-            model = model.cuda()
-            
-            outputs = model(images)#['out']
-            
-            # loss를 계산합니다.
-            loss = criterion(outputs, masks)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-            
-            # step 주기에 따라 loss를 출력합니다.
-            if (step + 1) % 5 == 0:
-                print(
-                    f'{datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")} | '
-                    f'Epoch [{epoch+1}/{num_epochs}], '
-                    f'Step [{step+1}/{len(train_loader)}], '
-                    f'Loss: {round(loss.item(),4)}'
-                )
-             
-        # validation 주기에 따라 loss를 출력하고 best model을 저장합니다.
-        if (epoch + 1) % valid_interval == 0:
-            dice = validation(epoch + 1, model, val_loader, criterion)
-            
-            if best_dice < dice:
-                print(f"Best performance at epoch: {epoch + 1}, {best_dice:.4f} -> {dice:.4f}")
-                print(f"Save model in {checkpoint_path}")
-                best_dice = dice
-                save_model(model, checkpoint_path)
+    parser.add_argument('--batch_size', type=int, default=20)
+    parser.add_argument('--num_workers', type=int, default=8)
+    
+    parser.add_argument('--lr', type=float, default=1e-4)
+
+    parser.add_argument("--input_size", type=int, default=512)
+
+    # parser.add_argument("--amp", action="store_true", help="mixed precision")
+ 
+    parser.add_argument('--max_epoch', type=int, default=5)
+    parser.add_argument('--valid_interval', type=int, default=1)
+
+    args = parser.parse_args()
+
+    return args
+
+if __name__ == '__main__':
+    args = parse_args()
+    train_model(args)
