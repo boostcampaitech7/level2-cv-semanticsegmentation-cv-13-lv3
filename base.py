@@ -29,14 +29,13 @@ def save_eda_images(dataset, save_dir, num_examples=5):
         os.makedirs(save_dir)
     
     for i in range(num_examples):
-        # Get a random sample from the dataset
-        image, mask = dataset[i]  # Unpack the tuple directly
+        image, mask = dataset[i] 
 
-        # Convert images to saveable format
         image_np = (image.cpu().numpy().transpose(1, 2, 0) * 255).astype(np.uint8)
-        mask_np = (mask.cpu().numpy().transpose(1, 2, 0) * 255).astype(np.uint8)
 
-        # Save image and mask with index
+        mask_np = mask.cpu().numpy()
+        mask_np = np.argmax(mask_np, axis=0).astype(np.uint8)  
+
         cv2.imwrite(os.path.join(save_dir, f"image_{i}.png"), image_np)
         cv2.imwrite(os.path.join(save_dir, f"mask_{i}.png"), mask_np)
 
