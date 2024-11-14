@@ -2,7 +2,7 @@
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from xraydataset import XRayDataset, split_data
-from utils import get_sorted_files_by_type
+from utils.utils import get_sorted_files_by_type
 from constants import TRAIN_DATA_DIR
 from argparse import ArgumentParser, Namespace
 import albumentations as A
@@ -13,7 +13,7 @@ from omegaconf import OmegaConf
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
-from util.Gsheet import Gsheet_param
+from utils.Gsheet import Gsheet_param
 
 # 모델 학습과 검증을 수행하는 함수
 def train_model(args):
@@ -95,3 +95,4 @@ if __name__ == '__main__':
     with open(args.config, 'r') as f:
         cfg = OmegaConf.load(f)
     train_model(cfg)
+    Gsheet_param(cfg)
