@@ -1,34 +1,29 @@
 # torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-
 from xraydataset import XRayDataset, split_data
 from utils import get_sorted_files_by_type
-
-from constants import TRAIN_DATA_DIR, WANDB_PROJECT_NAME
-
-from argparse import ArgumentParser
-
+from constants import TRAIN_DATA_DIR
+from argparse import ArgumentParser, Namespace
 import albumentations as A
-
 import os
 import torch
-
 from model_lightning import SegmentationModel
-
+from omegaconf import OmegaConf
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
+from util.Gsheet import Gsheet_param
 
 # 모델 학습과 검증을 수행하는 함수
 def train_model(args):
-
+    args_dict = OmegaConf.to_container(args, resolve=True)
+    run_name = args_dict.pop('run_name', None)
+    project_name = args_dict.pop('project_name', None)
     seed_everything(args.seed)
+    # wandb.init(project=args.project_name, name=args.run_name, config=args_dict)
 
-    config = args.__dict__
-    run_name = config.pop('run_name', None)  # 'run_name'이 있으면 가져오고 없으면 None
-
-    wandb_logger = WandbLogger(project=WANDB_PROJECT_NAME, name=run_name, config=config)
+    wandb_logger = WandbLogger(project=project_name, name=run_name, config=args_dict)
 
     # model = models.segmentation.fcn_resnet50(pretrained=True)
     # # output class 개수를 dataset에 맞도록 수정합니다.
@@ -91,32 +86,12 @@ def train_model(args):
     trainer.fit(seg_model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
 
 
-def parse_args():
-    parser = ArgumentParser()
-
-    parser.add_argument('--checkpoint_dir', type=str,default="./checkpoints")
-    parser.add_argument('--checkpoint_file', type=str,default="fcn_resnet50_best_model.pt")
-    
-    parser.add_argument('--seed', type=int, default=42)
-
-    parser.add_argument('--run_name', type=str)
-
-    parser.add_argument('--batch_size', type=int, default=20)
-    parser.add_argument('--num_workers', type=int, default=8)
-    
-    parser.add_argument('--lr', type=float, default=1e-4)
-
-    parser.add_argument("--input_size", type=int, default=512)
-
-    # parser.add_argument("--amp", action="store_true", help="mixed precision")
- 
-    parser.add_argument('--max_epoch', type=int, default=5)
-    parser.add_argument('--valid_interval', type=int, default=1)
-
-    args = parser.parse_args()
-
-    return args
-
 if __name__ == '__main__':
-    args = parse_args()
-    train_model(args)
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--config", type=str, default="configs/base_config.yaml"
+    )
+    args = parser.parse_args()
+    with open(args.config, 'r') as f:
+        cfg = OmegaConf.load(f)
+    train_model(cfg)

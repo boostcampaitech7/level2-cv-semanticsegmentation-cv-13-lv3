@@ -11,7 +11,6 @@ CLASS2IND = {v: i for i, v in enumerate(CLASSES)}
 
 IND2CLASS = {v: k for k, v in CLASS2IND.items()}
 
-TRAIN_DATA_DIR = '../train'
-TEST_DATA_DIR = '../test'
+TRAIN_DATA_DIR = '../../data/train'
+TEST_DATA_DIR = '../../data/test'
 
-WANDB_PROJECT_NAME = 'project4_test_run'
