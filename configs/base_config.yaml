@@ -2,15 +2,17 @@ checkpoint_dir: ./checkpoints
 checkpoint_file: fcn_resnet50_best_model.pt
 project_name: project4_test_run
 
-seed: 42
-
+#----------------------------------#
 run_name: test yaml
+
+seed: 42
 
 batch_size: 20
 num_workers: 8
 
-lr: 0.0001
+lr: 1e-4
 
 input_size: 512
 max_epoch: 5
 valid_interval: 1
+validation: 15
