@@ -1,24 +1,16 @@
 # torch
 from torch.utils.data import DataLoader
-
-
 from xraydataset import XRayDataset
 from utils import get_sorted_files_by_type
-
 from constants import TEST_DATA_DIR
-
 from argparse import ArgumentParser
-
 import albumentations as A
-
 import os
 import torch
-
 from model_lightning import SegmentationModel
-
 from lightning.pytorch import Trainer
-
 import numpy as np
+from omegaconf import OmegaConf
 
 # 테스트를 수행하는 함수
 def test_model(args):
@@ -47,23 +39,12 @@ def test_model(args):
     # 테스트 실행
     trainer.test(seg_model, dataloaders=test_loader)
 
-def parse_args():
-    parser = ArgumentParser()
-
-    parser.add_argument('--checkpoint_dir', type=str,default="./checkpoints")
-    parser.add_argument('--checkpoint_file', type=str,default="fcn_resnet50_best_model.ckpt")
-    
-    parser.add_argument('--seed', type=int, default=42)
-
-    parser.add_argument('--batch_size', type=int, default=8)
-    parser.add_argument('--num_workers', type=int, default=8)
-
-    parser.add_argument("--input_size", type=int, default=512)
-
-    args = parser.parse_args()
-
-    return args
-
 if __name__ == '__main__':
-    args = parse_args()
+    parser = ArgumentParser()
+    parser.add_argument(
+        "--config", type=str, default="configs/base_config.yaml"
+    )
+    args = parser.parse_args()
+    with open(args.config, 'r') as f:
+        cfg = OmegaConf.load(f)
     test_model(args)
