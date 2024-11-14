@@ -24,13 +24,17 @@ class GPUMonitor:
             "Server4": [os.getenv("SERVER_KEY_PATH"), os.getenv("SERVER4_PORT"), os.getenv("SERVER4_ADDRESS")]
         }
 
-        # Windows 환경에 맞는 파일 경로 설정
-        self.data_dir = Path(os.path.expanduser("~")) / "gpu_monitor_data"
-        self.data_dir.mkdir(exist_ok=True) # 디렉토리가 없으면 생성
+        # 현재 파일의 디렉토리를 기준으로 data_dir 설정
+        current_dir = Path(__file__).parent
+        self.data_dir = current_dir / "gpu_monitor_data"
+        self.data_dir.mkdir(exist_ok=True)  # 디렉토리가 없으면 생성
+        
+        # 이전 값과 초기 실행 여부 파일 경로 설정
+        self.prev_values_file = self.data_dir / "gpu_usage_prev.txt"
+        self.current_values_file = self.data_dir / "gpu_usage_current.txt"
         
         # 초기 실행 여부를 확인하기 위한 플래그 파일
-        self.prev_values_file = self.data_dir / "gpu_usage_prev.txt"
-        self.initial_run_file = self.data_dir / "initial_run.txt"
+        self.initial_run_file = self.data_dir / "gpu_initial_run.txt"
 
     def check_gpu_usage(self):
         """각 서버의 디스크 사용량을 확인하고 저장"""
@@ -100,10 +104,6 @@ class GPUMonitor:
     def run(self):
         """메인 모니터링 로직"""
         
-        # 매번 시작 시 initial_run_file 파일을 삭제하여 초기 상태를 전송하게 설정
-        if self.initial_run_file.exists():
-            self.initial_run_file.unlink()  # 파일 삭제
-        
         # 현재 값 확인
         current_values = self.check_gpu_usage()
 
@@ -132,12 +132,8 @@ class GPUMonitor:
             prev_value = prev_values.get(server_name)
             
             if current_value != prev_value:
-                # 변화량 계산 (숫자로 변환하여 비교)
                 try:
-                    # # 슬래시로 구분된 두 값을 나누어 사용량과 총 용량을 각각 추출
-                    # current_num, current_total = map(float, current_value.split('/'))
-                    # prev_num = float(prev_value.split('/')[0]) if prev_value else 0
-                    
+                    # 슬래시로 구분된 두 값을 나누어 사용량과 총 용량을 각각 추출
                     current_num = float(current_value.split('/')[0].strip())  # 현재 사용량 (MB)
                     prev_num = float(prev_value.split('/')[0].strip()) if prev_value else 0
                     

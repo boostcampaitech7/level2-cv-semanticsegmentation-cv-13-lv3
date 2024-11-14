@@ -24,15 +24,17 @@ class DiskMonitor:
             "Server4": [os.getenv("SERVER_KEY_PATH"), os.getenv("SERVER4_PORT"), os.getenv("SERVER4_ADDRESS")]
         }
         
-        # Windows 환경에 맞는 파일 경로 설정
-        self.data_dir = Path(os.path.expanduser("~")) / "disk_monitor_data"
+        # 현재 파일의 디렉토리를 기준으로 data_dir 설정
+        current_dir = Path(__file__).parent
+        self.data_dir = current_dir / "disk_monitor_data"
         self.data_dir.mkdir(exist_ok=True)  # 디렉토리가 없으면 생성
         
+        # 이전 값과 초기 실행 여부 파일 경로 설정
         self.prev_values_file = self.data_dir / "disk_usage_prev.txt"
         self.current_values_file = self.data_dir / "disk_usage_current.txt"
         
         # 초기 실행 여부를 확인하기 위한 플래그 파일
-        self.initial_run_file = self.data_dir / "initial_run.txt"
+        self.initial_run_file = self.data_dir / "disk_initial_run.txt"
 
     def check_disk_usage(self):
         """각 서버의 디스크 사용량을 확인하고 저장"""
@@ -98,10 +100,6 @@ class DiskMonitor:
 
     def run(self):
         """메인 모니터링 로직"""
-        # 매번 시작 시 initial_run_file 파일을 삭제하여 초기 상태를 전송하게 설정
-        if self.initial_run_file.exists():
-            self.initial_run_file.unlink()  # 파일 삭제
-        
         # 현재 값 확인
         current_values = self.check_disk_usage()
         
@@ -159,10 +157,10 @@ def main():
         try:
             monitor.run()
             print(f"모니터링 실행 완료: {time.strftime('%Y-%m-%d %H:%M:%S')}")  # 타임스탬프 추가
-            time.sleep(600)  # 10분 대기
+            time.sleep(1800)  # 30분 대기
         except Exception as e:
             print(f"Error in main loop: {e}")
-            time.sleep(600)  # 에러 발생시에도 10분 대기 후 재시도
+            time.sleep(1800)  # 에러 발생시에도 30분 대기 후 재시도
 
 if __name__ == "__main__":
     main()
