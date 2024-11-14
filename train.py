@@ -1,6 +1,7 @@
 # torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
+from utils import set_seed
 from xraydataset import XRayDataset, split_data
 from utils import get_sorted_files_by_type
 from constants import TRAIN_DATA_DIR
@@ -21,6 +22,7 @@ def train_model(args):
     run_name = args_dict.pop('run_name', None)
     project_name = args_dict.pop('project_name', None)
     seed_everything(args.seed)
+    set_seed(args.seed)
     # wandb.init(project=args.project_name, name=args.run_name, config=args_dict)
 
     wandb_logger = WandbLogger(project=project_name, name=run_name, config=args_dict)
