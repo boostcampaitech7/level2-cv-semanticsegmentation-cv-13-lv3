@@ -75,10 +75,8 @@ def inference(args):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
 
-    # Add missing arguments for model encoder
     parser.add_argument('--encoder_name', type=str, default='tu-xception71', help="encoder name for model")
     parser.add_argument('--encoder_weights', type=str, default=None, help="pre-trained weights for encoder (default: None)")
-
     parser.add_argument('--seed', type=int, default=137, help='random seed')
     parser.add_argument('--checkpoint_dir', type=str, default="/data/ephemeral/home/exp", help="Directory where model is saved")
     parser.add_argument('--checkpoint_file', type=str, default="best.pt", help="Model checkpoint file name")

@@ -28,7 +28,7 @@ IND2CLASS = {v: k for k, v in CLASS2IND.items()}
 
 def do_clahe(image) :
     image = cv2.cvtColor(image, cv2.COLOR_BGR2YUV)
-    clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(8,8)) #default 2.0
+    clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(8,8)) 
     image[:,:,0] = clahe.apply(image[:,:,0])
     image = cv2.cvtColor(image, cv2.COLOR_YUV2BGR)
     return image
@@ -49,7 +49,6 @@ class XRayDataset(Dataset):
             if os.path.splitext(fname)[1].lower() == ".json"
         }
 
-        # Debugging print statements
         print(f"Found {len(pngs)} .png files in {image_root}")
         print(f"Found {len(jsons)} .json files in {label_root}")
 
@@ -80,7 +79,6 @@ class XRayDataset(Dataset):
         dataset_no = 2
         for i, (x, y) in enumerate(gkf.split(_filenames, ys, groups)):
             if is_train:
-                # 0번을 validation dataset으로 사용합니다.
                 if i == dataset_no:
                     continue
                     
@@ -93,7 +91,6 @@ class XRayDataset(Dataset):
                 filenames = list(_filenames[y])
                 labelnames = list(_labelnames[y])
                 
-                # skip i > 0
                 break
         
         self.filenames = filenames
@@ -135,22 +132,18 @@ class XRayDataset(Dataset):
         label_name = self.labelnames[item]
         label_path = os.path.join(self.label_root, label_name)
         
-        # process a label of shape (H, W, NC)
         label_shape = tuple(image.shape[:2]) + (len(CLASSES), )
         label = np.zeros(label_shape, dtype=np.uint8)
         
-        # read label file
         with open(label_path, "r") as f:
             annotations = json.load(f)
         annotations = annotations["annotations"]
         
-        # iterate each class
         for ann in annotations:
             c = ann["label"]
             class_ind = CLASS2IND[c]
             points = np.array(ann["points"])
-            
-            # polygon to mask
+
             class_label = np.zeros(image.shape[:2], dtype=np.uint8)
             cv2.fillPoly(class_label, [points], 1)
             label[..., class_ind] = class_label
@@ -175,22 +168,18 @@ class XRayDataset(Dataset):
                         y = random.randint(100,1800)
                         alpha = random.randint(25,50)
 
-                        # 0. check whether generated (x,y) coordinate is in the background 
                         bone_area_x = [i for i in range(400,1600)]
                         while x in bone_area_x:
                             x = random.randint(100,1800)
                         x -= alpha
                         
-                        # 1. create mask for new image
                         img = Image.new('L', target_image.shape[:2], 0)
                         ImageDraw.Draw(img).polygon(ann['points'], outline=0, fill=1)
                         mask = np.array(img)
                         
-                        # 2. paste maskout poly to source image
                         new_image = cv2.bitwise_or(target_image, target_image, mask=mask)
                         image[y:y+max[1]-min[1], x:x+max[0]-min[0], ...] = new_image[min[1]:max[1], min[0]:max[0], ...]
 
-                        # 3. update label
                         ori_label = label[..., target_c]
                         ori_label[y:y+max[1]-min[1], x:x+max[0]-min[0]] = mask[min[1]:max[1], min[0]:max[0]]
                         label[..., target_c] = ori_label
@@ -202,8 +191,7 @@ class XRayDataset(Dataset):
             image = result["image"]
             label = result["mask"] if self.is_train else label
 
-        # to tenser will be done later
-        image = image.transpose(2, 0, 1)    # make channel first
+        image = image.transpose(2, 0, 1)
         label = label.transpose(2, 0, 1)
         
         image = torch.from_numpy(image).float()
@@ -246,8 +234,7 @@ class XRayInferenceDataset(Dataset):
             result = self.transforms(**inputs)
             image = result["image"]
 
-        # to tenser will be done later
-        image = image.transpose(2, 0, 1)    # make channel first
+        image = image.transpose(2, 0, 1)  
         
         image = torch.from_numpy(image).float()
             
