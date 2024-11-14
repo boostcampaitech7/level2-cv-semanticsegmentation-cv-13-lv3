@@ -41,6 +41,7 @@ def set_seed(seed):
     torch.backends.cudnn.benchmark = False
     np.random.seed(seed)
     random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
 
 def get_sorted_files_by_type(path,file_type='json'):
     current_dir = os.getcwd()  # 현재 작업 디렉토리 기준으로 상대 경로 생성
