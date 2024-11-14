@@ -66,7 +66,7 @@ def Gsheet_param(cfg):
             width = max(len(header)*10+20,80)
             set_column_width(worksheet, column_letter, width)
 
-        print(f"'{cfg.experiment_name}' 워크시트가 생성되었습니다.")
+        print(f"'{cfg.project_name}' 워크시트가 생성되었습니다.")
 
     # 실험 인자를 작성한 worksheet
     worksheet = doc.worksheet(cfg.project_name)
