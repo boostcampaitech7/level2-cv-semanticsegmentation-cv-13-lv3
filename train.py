@@ -1,7 +1,7 @@
 # torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
-from utils.utils import set_seed
+from utils import set_seed
 from xraydataset import XRayDataset, split_data
 from utils.utils import get_sorted_files_by_type
 from constants import TRAIN_DATA_DIR
