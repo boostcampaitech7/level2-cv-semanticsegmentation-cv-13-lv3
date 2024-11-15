@@ -3,13 +3,12 @@ import torch
 import torch.nn.functional as F
 import albumentations as A
 import pandas as pd
-import numpy as np
 import argparse
 import os
 from tqdm.auto import tqdm
 from torch.utils.data import DataLoader
-from github.dataset_eda import XRayInferenceDataset 
-from github.eda.utils import encode_mask_to_rle, set_seed
+from dataset import XRayInferenceDataset 
+from utils import encode_mask_to_rle, set_seed
 
 CLASSES = [
     'finger-1', 'finger-2', 'finger-3', 'finger-4', 'finger-5',
@@ -80,7 +79,7 @@ if __name__ == '__main__':
     parser.add_argument('--seed', type=int, default=137, help='random seed')
     parser.add_argument('--checkpoint_dir', type=str, default="/data/ephemeral/home/exp", help="Directory where model is saved")
     parser.add_argument('--checkpoint_file', type=str, default="best.pt", help="Model checkpoint file name")
-    parser.add_argument('--test_image_root', type=str, default="/data/ephemeral/home/test/DCM", help="Directory with test images")
+    parser.add_argument('--test_image_root', type=str, default="/data/ephemeral/home/data/test/DCM", help="Directory with test images")
     parser.add_argument('--batch_size', type=int, default=2, help='Batch size for inference')
     parser.add_argument('--test_threshold', type=float, default=0.5, help='Threshold for binarizing segmentation output')
     parser.add_argument('--input_size', type=int, default=1024, help="Input size for resizing during inference")
