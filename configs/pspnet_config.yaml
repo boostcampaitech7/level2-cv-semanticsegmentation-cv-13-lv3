@@ -1,0 +1,19 @@
+checkpoint_dir: ./checkpoints/pspnet
+checkpoint_file: pspnet_resnet50_best_model.pt
+project_name: PSPNet
+
+#----------------------------------#
+run_name: resnet50_adamw_100ep
+
+seed: 42
+
+batch_size: 32
+num_workers: 8
+
+lr: 1e-4
+
+input_size: 512
+max_epoch: 100
+valid_interval: 5
+
+amp: True
