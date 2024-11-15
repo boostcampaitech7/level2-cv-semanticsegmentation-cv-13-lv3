@@ -63,7 +63,7 @@ def train_model(args):
     # 체크포인트 콜백 설정
     checkpoint_callback = ModelCheckpoint(
         dirpath=args.checkpoint_dir,
-        filename='fcn_resnet50_best_model',
+        filename='U-Net++',
         monitor='val/dice',
         mode='max',
         save_top_k=3
