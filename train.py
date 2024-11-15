@@ -80,7 +80,8 @@ def train_model(args):
         check_val_every_n_epoch=args.valid_interval,
         callbacks=[checkpoint_callback],
         accelerator='gpu', 
-        devices=1 if torch.cuda.is_available() else None
+        devices=1 if torch.cuda.is_available() else None,
+        precision="16-mixed" if args.amp else 32
     )
 
     # 학습 시작

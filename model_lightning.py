@@ -48,10 +48,10 @@ class SegmentationModel(LightningModule):
         self.log('val/loss', loss, prog_bar=True, on_step=True, on_epoch=False)
 
         outputs = torch.sigmoid(outputs)
-        outputs = (outputs > self.thr).detach().cpu()
-        masks = masks.detach().cpu()
+        outputs = (outputs > self.thr)
+        masks = masks
         
-        dice = dice_coef(outputs, masks)
+        dice = dice_coef(outputs, masks).detach().cpu()
         self.validation_dices.append(dice)  # dice score 저장
         return dice
 
