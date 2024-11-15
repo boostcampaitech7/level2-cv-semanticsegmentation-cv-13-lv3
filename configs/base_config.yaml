@@ -9,10 +9,10 @@ seed: 42
 
 batch_size: 20
 num_workers: 8
+amp: 
 
 lr: 1e-4
 
 input_size: 512
 max_epoch: 5
 valid_interval: 1
-validation: 15
