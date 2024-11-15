@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 
 from xraydataset import XRayDataset
-from utils import get_sorted_files_by_type, label2rgb
+from utils.utils import get_sorted_files_by_type, label2rgb
 
 from constants import TRAIN_DATA_DIR, CLASSES, PALETTE
 
@@ -47,7 +47,7 @@ def draw_outline(image, label, is_binary = False):
                 pts = [(int(point[0][0]), int(point[0][1])) for point in contour]
                 draw.polygon(pts, outline=color)
 
-    return image, label
+    return image
     
 
 # 모델 학습과 검증을 수행하는 함수
