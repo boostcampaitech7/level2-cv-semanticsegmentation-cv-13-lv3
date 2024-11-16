@@ -47,4 +47,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
     with open(args.config, 'r') as f:
         cfg = OmegaConf.load(f)
-    test_model(args)
+    test_model(cfg)
