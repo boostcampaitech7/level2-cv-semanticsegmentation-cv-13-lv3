@@ -10,6 +10,7 @@ from omegaconf import OmegaConf
 from argparse import ArgumentParser
 import torch
 
+
 def train_model(config):
     model_config = get_config(config['model_name'])
     seed_everything(config['seed'])
@@ -26,11 +27,13 @@ def train_model(config):
     data_module.setup()
 
     seg_model = CustomLightningModule(
+        model_name=config["model_name"],
         encoder_name=model_config.encoder_name,
         encoder_weights=model_config.encoder_weights,
         classes=model_config.classes,
         lr=config['lr']
     )
+
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=config['checkpoint_dir'],
@@ -57,8 +60,11 @@ if __name__ == '__main__':
     parser.add_argument("--config", type=str, required=True, help="Path to the YAML configuration file")
     args = parser.parse_args()
 
+    # Load configuration
     cfg = OmegaConf.load(args.config)
 
+    # Train model
     train_model(cfg)
 
+    # Log parameters to Gsheet
     Gsheet_param(cfg)

@@ -1,34 +1,37 @@
-model_name: DeepLabV3Plus
-project_name: ExampleProject
-run_name: Experiment1
+model_name: Unet++
+project_name: SemanticSegmentation
+run_name: Unet++
 image_root: /data/ephemeral/home/data/train/DCM
 label_root: /data/ephemeral/home/data/train/outputs_json
 batch_size: 16
 num_workers: 4
 input_size: 512
-max_epoch: 50
+max_epoch: 100
+valid_split: 0.2
 valid_interval: 1
 checkpoint_dir: ./checkpoints
 seed: 42
 lr: 0.0001
 
 # Augmentations 설정
-augmentations:
-  - type: grid_dropout
-    params:
-      ratio: 0.5
-      unit_size_min: 32
-      unit_size_max: 64
-      p: 0.5
-  - type: cutout
-    params:
-      num_holes: 8
-      max_h_size: 32
-      max_w_size: 32
-      p: 0.5
-  - type: mixup
-    params:
-      alpha: 0.4
-  - type: cutmix
-    params:
-      alpha: 0.4
+transforms:
+  train:
+    - type: Cutout
+      params:
+        num_holes: 8
+        max_h_size: 32
+        max_w_size: 32
+        p: 0.5
+    - type: Grid_dropout
+      params:
+        ratio: 0.5
+        unit_size_min: 32
+        unit_size_max: 64
+        p: 0.5
+  valid:
+    - type: Cutout
+      params:
+        num_holes: 4
+        max_h_size: 16
+        max_w_size: 16
+        p: 0.5
