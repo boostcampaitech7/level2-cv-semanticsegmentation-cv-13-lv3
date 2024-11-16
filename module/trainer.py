@@ -1,30 +1,23 @@
 import pytorch_lightning as pl
 import segmentation_models_pytorch as smp
+import torch
 import torch.nn as nn
-import torch.optim as optim
+from torchmetrics.classification import MulticlassAccuracy
 
 class CustomLightningModule(pl.LightningModule):
     def __init__(self, model_name, encoder_name, encoder_weights, classes, lr):
-        super().__init__()
-        self.save_hyperparameters()  # Hyperparameter 저장
-
-        # SMP 모델 초기화
-        smp_model_map = {
-            "Unet++": "UnetPlusPlus",
-        }
-        if model_name in smp_model_map:
-            self.model = getattr(smp, smp_model_map[model_name])(
-                encoder_name=encoder_name,
-                encoder_weights=encoder_weights,
-                classes=classes,
-                activation=None,
-            )
-        else:
-            raise ValueError(f"Unsupported model_name: {model_name}")
-
-        # 손실 함수 정의
+        super(CustomLightningModule, self).__init__()
+        self.save_hyperparameters()
+        self.model = smp.Unet(
+            encoder_name=encoder_name,
+            encoder_weights=encoder_weights,
+            classes=classes,
+            activation=None
+        )
         self.loss_fn = nn.BCEWithLogitsLoss()
         self.lr = lr
+        self.train_acc = MulticlassAccuracy(num_classes=classes)
+        self.val_acc = MulticlassAccuracy(num_classes=classes)
 
     def forward(self, x):
         return self.model(x)
@@ -34,16 +27,19 @@ class CustomLightningModule(pl.LightningModule):
         outputs = self.model(images)
         loss = self.loss_fn(outputs, masks)
         self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        acc = self.train_acc(torch.sigmoid(outputs), masks.int())
+        self.log("train_acc", acc, on_step=True, on_epoch=True, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         images, masks = batch
         outputs = self.model(images)
         loss = self.loss_fn(outputs, masks)
-        self.log("val_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
+        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
+        acc = self.val_acc(torch.sigmoid(outputs), masks.int())
+        self.log("val_acc", acc, on_step=False, on_epoch=True, prog_bar=True)
         return loss
 
     def configure_optimizers(self):
-        optimizer = optim.Adam(self.parameters(), lr=self.lr)
-        scheduler = optim.lr_scheduler.StepLR(optimizer, step_size=10, gamma=0.1)
-        return {"optimizer": optimizer, "lr_scheduler": scheduler}
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+        return optimizer

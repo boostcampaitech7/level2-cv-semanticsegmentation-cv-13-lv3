@@ -8,7 +8,7 @@ from .pan_config import PANConfig
 from .deeplabv3_config import DeepLabV3Config
 from .deeplabv3plus_config import DeepLabV3PlusConfig
 from .upernet_config import UPerNetConfig
-
+from albumentations import Compose, Resize, HorizontalFlip, GridDropout, CoarseDropout
 import segmentation_models_pytorch as smp
 
 CONFIG_MAP = {
@@ -24,10 +24,34 @@ CONFIG_MAP = {
     "UPerNet": UPerNetConfig,
 }
 
-def get_config(model_name):
-    if model_name in CONFIG_MAP:
-        return CONFIG_MAP[model_name]()
-    raise ValueError(f"Unsupported model name: {model_name}")
+class Config:
+    def __init__(self):
+        self.model_name = "Unet++"
+        self.project_name = "SemanticSegmentation"
+        self.run_name = "Unet++"
+        self.image_root = "/data/ephemeral/home/data/train/DCM"
+        self.label_root = "/data/ephemeral/home/data/train/outputs_json"
+        self.batch_size = 16
+        self.num_workers = 4
+        self.input_size = 512
+        self.max_epoch = 100
+        self.valid_split = 0.2
+        self.valid_interval = 1
+        self.checkpoint_dir = "./checkpoints"
+        self.seed = 42
+        self.lr = 0.0001
+        self.train_transforms = Compose([
+            Resize(height=512, width=512),
+            HorizontalFlip(p=0.5),
+            CoarseDropout(max_holes=8, max_height=32, max_width=32, p=0.5),
+            GridDropout(ratio=0.5, unit_size_min=32, unit_size_max=64, p=0.5)
+        ])
+        self.valid_transforms = Compose([
+            Resize(height=512, width=512)
+        ])
+
+def get_config():
+    return Config()
 
 def build_model(model_name, encoder_name, encoder_weights, num_classes):
     if model_name == "DeepLabV3Plus":

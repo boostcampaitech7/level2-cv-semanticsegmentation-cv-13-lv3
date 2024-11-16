@@ -1,131 +1,137 @@
-import os
-import cv2
-import albumentations as A
+import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import pytorch_lightning as pl
-from torch.utils.data import DataLoader
-from augmentation import Cutout, Grid_dropout
+from sklearn.model_selection import GroupKFold
+import os
+import cv2
+import json
+import numpy as np
+import random
+from torchvision import transforms
+
+CLASSES = [
+    'finger-1', 'finger-2', 'finger-3', 'finger-4', 'finger-5',
+    'finger-6', 'finger-7', 'finger-8', 'finger-9', 'finger-10',
+    'finger-11', 'finger-12', 'finger-13', 'finger-14', 'finger-15',
+    'finger-16', 'finger-17', 'finger-18', 'finger-19', 'Trapezium',
+    'Trapezoid', 'Capitate', 'Hamate', 'Scaphoid', 'Lunate',
+    'Triquetrum', 'Pisiform', 'Radius', 'Ulna',
+]
+
+CLASS2IND = {v: i for i, v in enumerate(CLASSES)}
+
+def do_clahe(image):
+    """Apply CLAHE for contrast enhancement."""
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2YUV)
+    clahe = cv2.createCLAHE(clipLimit=1.0, tileGridSize=(8, 8))
+    image[:, :, 0] = clahe.apply(image[:, :, 0])
+    return cv2.cvtColor(image, cv2.COLOR_YUV2BGR)
 
 class XRayDataset(Dataset):
-    def __init__(self, image_root, label_root, transforms=None, clahe=False, copypaste=False):
-        """
-        Args:
-            image_root (str): 이미지 경로
-            label_root (str): 레이블 경로
-            transforms (albumentations.Compose): 데이터 변환
-            clahe (bool): CLAHE 적용 여부
-            copypaste (bool): Copy-Paste augmentation 적용 여부
-        """
+    def __init__(self, image_root, label_root, is_train=True, transforms=None, clahe=False, copypaste=False, k=3):
+        # 파일 로드 및 정렬
+        pngs = {
+            os.path.relpath(os.path.join(root, fname), start=image_root)
+            for root, _dirs, files in os.walk(image_root)
+            for fname in files if os.path.splitext(fname)[1].lower() == ".png"
+        }
+        jsons = {
+            os.path.relpath(os.path.join(root, fname), start=label_root)
+            for root, _dirs, files in os.walk(label_root)
+            for fname in files if os.path.splitext(fname)[1].lower() == ".json"
+        }
+        pngs = sorted(pngs)
+        jsons = sorted(jsons)
+
+        _filenames = np.array(pngs)
+        _labelnames = np.array(jsons)
+
+        groups = [os.path.dirname(fname) for fname in _filenames]
+        ys = [0 for fname in _filenames]
+
+        gkf = GroupKFold(n_splits=5)
+        dataset_no = 2
+        filenames, labelnames = [], []
+        for i, (x, y) in enumerate(gkf.split(_filenames, ys, groups)):
+            if is_train:
+                if i != dataset_no:
+                    filenames += list(_filenames[y])
+                    labelnames += list(_labelnames[y])
+            else:
+                if i == dataset_no:
+                    filenames = list(_filenames[y])
+                    labelnames = list(_labelnames[y])
+        self.filenames = filenames
+        self.labelnames = labelnames
         self.image_root = image_root
         self.label_root = label_root
         self.transforms = transforms
         self.clahe = clahe
         self.copypaste = copypaste
-        self.image_files = self._get_files(image_root)
-        self.label_files = self._get_files(label_root)
-
-    def _get_files(self, root_dir):
-        return sorted([os.path.join(root_dir, fname) for fname in os.listdir(root_dir)])
+        self.k = k
 
     def __len__(self):
-        return len(self.image_files)
+        return len(self.filenames)
 
-    def __getitem__(self, idx):
-        image = cv2.imread(self.image_files[idx], cv2.IMREAD_GRAYSCALE)
-        label = cv2.imread(self.label_files[idx], cv2.IMREAD_GRAYSCALE)
-
+    def __getitem__(self, index):
+        image_name = self.filenames[index]
+        image_path = os.path.join(self.image_root, image_name)
+        image = cv2.imread(image_path)
         if self.clahe:
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            image = clahe.apply(image)
+            image = do_clahe(image)
+        image = image / 255.0
+
+        label_name = self.labelnames[index]
+        label_path = os.path.join(self.label_root, label_name)
+        label_shape = tuple(image.shape[:2]) + (len(CLASSES),)
+        label = np.zeros(label_shape, dtype=np.uint8)
+        with open(label_path, "r") as f:
+            annotations = json.load(f)["annotations"]
+        for ann in annotations:
+            c = ann["label"]
+            class_ind = CLASS2IND[c]
+            points = np.array(ann["points"])
+            class_label = np.zeros(image.shape[:2], dtype=np.uint8)
+            cv2.fillPoly(class_label, [points], 1)
+            label[..., class_ind] = class_label
 
         if self.transforms:
             augmented = self.transforms(image=image, mask=label)
-            image, label = augmented['image'], augmented['mask']
+            image = augmented["image"]
+            label = augmented["mask"]
 
-        return image, label
+        image = image.transpose(2, 0, 1)
+        label = label.transpose(2, 0, 1)
 
-class CustomDataModule(pl.LightningDataModule):
-    def __init__(self, 
-                 image_root, 
-                 label_root, 
-                 batch_size=16, 
-                 num_workers=4, 
-                 transforms=None, 
-                 valid_split=0.2, 
-                 clahe=False, 
-                 copypaste=False):
-        """
-        PyTorch Lightning DataModule을 사용하는 데이터 관리 클래스.
-        Args:
-            image_root (str): 이미지 데이터 경로
-            label_root (str): 레이블 데이터 경로
-            batch_size (int): 배치 크기
-            num_workers (int): DataLoader의 worker 수
-            transforms (dict): Augmentation 설정
-            valid_split (float): 검증 데이터 비율
-            clahe (bool): CLAHE 적용 여부
-            copypaste (bool): Copy-Paste augmentation 적용 여부
-        """
+        return torch.tensor(image, dtype=torch.float32), torch.tensor(label, dtype=torch.float32)
+
+class XRayDataModule(pl.LightningDataModule):
+    def __init__(self, image_root, label_root, batch_size=16, num_workers=4, valid_split=0.2, transforms=None, clahe=False, copypaste=False):
         super().__init__()
         self.image_root = image_root
         self.label_root = label_root
         self.batch_size = batch_size
         self.num_workers = num_workers
-        self.transforms = transforms  
         self.valid_split = valid_split
+        self.transforms = transforms
         self.clahe = clahe
         self.copypaste = copypaste
 
     def setup(self, stage=None):
-        """
-        데이터셋 초기화 및 Train/Validation split 처리
-        """
-        train_transforms = self._create_transforms(self.transforms['train'])
-        valid_transforms = self._create_transforms(self.transforms['valid'])
-
-        full_dataset = XRayDataset(
+        dataset = XRayDataset(
             image_root=self.image_root,
             label_root=self.label_root,
-            transforms=train_transforms,  
+            is_train=True,
+            transforms=self.transforms,
             clahe=self.clahe,
             copypaste=self.copypaste
         )
-
-        val_size = int(len(full_dataset) * self.valid_split)
-        train_size = len(full_dataset) - val_size
-        self.train_dataset, self.val_dataset = random_split(full_dataset, [train_size, val_size])
-
-        self.val_dataset.dataset.transforms = valid_transforms
+        val_size = int(len(dataset) * self.valid_split)
+        train_size = len(dataset) - val_size
+        self.train_dataset, self.val_dataset = random_split(dataset, [train_size, val_size])
 
     def train_dataloader(self):
-        """
-        학습 데이터 로더 반환
-        """
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, 
-                          num_workers=self.num_workers, shuffle=True)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=True)
 
     def val_dataloader(self):
-        """
-        검증 데이터 로더 반환
-        """
-        return DataLoader(self.val_dataset, batch_size=self.batch_size, 
-                          num_workers=self.num_workers, shuffle=False)
-
-    def _create_transforms(self, transforms_config):
-        """
-        YAML 설정에 따라 Albumentations 변환을 생성.
-        Args:
-            transforms_config (list): Augmentation 설정 리스트
-        Returns:
-            A.Compose: Albumentations 변환 객체
-        """
-        transform_list = []
-        for transform in transforms_config:
-            t_type = transform['type']
-            params = transform.get('params', {})
-            if t_type == "cutout":
-                transform_list.append(Cutout(**params))
-            elif t_type == "grid_dropout":
-                transform_list.append(Grid_dropout(**params))
-            # 다른 augmentation 추가
-        return A.Compose(transform_list)
+        return DataLoader(self.val_dataset, batch_size=self.batch_size, num_workers=self.num_workers, shuffle=False)
