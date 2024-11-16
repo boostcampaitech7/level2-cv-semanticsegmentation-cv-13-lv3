@@ -1,23 +1,37 @@
+from albumentations import Compose, Resize, HorizontalFlip, GridDropout, CoarseDropout
+from albumentations.pytorch import ToTensorV2
+
 class BaseConfig:
     def __init__(self):
-        self.seed = 137
-        self.epochs = 100
-        self.lr = 1e-4
-        self.batch_size = 16
-        self.valid_batch_size = 16
-        self.valid_interval = 2
-        self.valid_thr = 0.5
-        self.save_dir = "exp"
-        self.save_name = "best_model.pt"
+        self.project_name = "SemanticSegmentation"
+        self.run_name = "Unet++"
         self.image_root = "/data/ephemeral/home/data/train/DCM"
         self.label_root = "/data/ephemeral/home/data/train/outputs_json"
-        self.encoder_name = "resnet34" 
-        self.encoder_weights = "imagenet"
-        self.classes = [
-            'finger-1', 'finger-2', 'finger-3', 'finger-4', 'finger-5',
-            'finger-6', 'finger-7', 'finger-8', 'finger-9', 'finger-10',
-            'finger-11', 'finger-12', 'finger-13', 'finger-14', 'finger-15',
-            'finger-16', 'finger-17', 'finger-18', 'finger-19', 'Trapezium',
-            'Trapezoid', 'Capitate', 'Hamate', 'Scaphoid', 'Lunate',
-            'Triquetrum', 'Pisiform', 'Radius', 'Ulna',
-        ]
+        self.batch_size = 16
+        self.num_workers = 4
+        self.input_size = 512
+        self.max_epoch = 100
+        self.valid_split = 0.2
+        self.valid_interval = 1
+        self.checkpoint_dir = "./checkpoints"
+        self.seed = 42
+        self.lr = 0.0001
+        self.train_transforms = Compose([
+            Resize(height=self.input_size, width=self.input_size),
+            HorizontalFlip(p=0.5),
+            CoarseDropout(max_holes=8, max_height=32, max_width=32, p=0.5),
+            GridDropout(ratio=0.5, unit_size_min=32, unit_size_max=64, p=0.5),
+            ToTensorV2(),
+        ])
+        self.valid_transforms = Compose([
+            Resize(height=self.input_size, width=self.input_size),
+            ToTensorV2(),
+        ])
+
+    def get_transforms(self, mode="train"):
+        if mode == "train":
+            return self.train_transforms
+        elif mode == "valid":
+            return self.valid_transforms
+        else:
+            raise ValueError(f"Unsupported mode: {mode}")

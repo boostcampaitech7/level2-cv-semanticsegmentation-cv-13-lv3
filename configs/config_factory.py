@@ -1,14 +1,13 @@
-from .unet_config import UNetConfig
-from .unetpp_config import UNetPlusPlusConfig
-from .manet_config import MAnetConfig
-from .linknet_config import LinknetConfig
-from .fpn_config import FPNConfig
-from .pspnet_config import PSPNetConfig
-from .pan_config import PANConfig
-from .deeplabv3_config import DeepLabV3Config
-from .deeplabv3plus_config import DeepLabV3PlusConfig
-from .upernet_config import UPerNetConfig
-from albumentations import Compose, Resize, HorizontalFlip, GridDropout, CoarseDropout
+from configs.unet_config import UNetConfig
+from configs.unetpp_config import UNetPlusPlusConfig
+from configs.manet_config import MAnetConfig
+from configs.linknet_config import LinknetConfig
+from configs.fpn_config import FPNConfig
+from configs.pspnet_config import PSPNetConfig
+from configs.pan_config import PANConfig
+from configs.deeplabv3_config import DeepLabV3Config
+from configs.deeplabv3plus_config import DeepLabV3PlusConfig
+from configs.upernet_config import UPerNetConfig
 import segmentation_models_pytorch as smp
 
 CONFIG_MAP = {
@@ -24,53 +23,31 @@ CONFIG_MAP = {
     "UPerNet": UPerNetConfig,
 }
 
-class Config:
-    def __init__(self):
-        self.model_name = "Unet++"
-        self.project_name = "SemanticSegmentation"
-        self.run_name = "Unet++"
-        self.image_root = "/data/ephemeral/home/data/train/DCM"
-        self.label_root = "/data/ephemeral/home/data/train/outputs_json"
-        self.batch_size = 16
-        self.num_workers = 4
-        self.input_size = 512
-        self.max_epoch = 100
-        self.valid_split = 0.2
-        self.valid_interval = 1
-        self.checkpoint_dir = "./checkpoints"
-        self.seed = 42
-        self.lr = 0.0001
-        self.train_transforms = Compose([
-            Resize(height=512, width=512),
-            HorizontalFlip(p=0.5),
-            CoarseDropout(max_holes=8, max_height=32, max_width=32, p=0.5),
-            GridDropout(ratio=0.5, unit_size_min=32, unit_size_max=64, p=0.5)
-        ])
-        self.valid_transforms = Compose([
-            Resize(height=512, width=512)
-        ])
-
-def get_config():
-    return Config()
+def get_config(model_name):
+    if model_name in CONFIG_MAP:
+        return CONFIG_MAP[model_name]()
+    else:
+        raise ValueError(f"Unsupported model_name: {model_name}")
 
 def build_model(model_name, encoder_name, encoder_weights, num_classes):
-    if model_name == "DeepLabV3Plus":
-        return smp.DeepLabV3Plus(encoder_name=encoder_name, encoder_weights=encoder_weights, classes=num_classes)
-    elif model_name == "UNet":
-        return smp.Unet(encoder_name=encoder_name, encoder_weights=encoder_weights, classes=num_classes)
-    elif model_name == "UNetPlusPlus":
-        return smp.UnetPlusPlus(encoder_name=encoder_name, encoder_weights=encoder_weights, classes=num_classes)
-    elif model_name == "MAnet":
-        return smp.MAnet(encoder_name=encoder_name, encoder_weights=encoder_weights, classes=num_classes)
-    elif model_name == "Linknet":
-        return smp.Linknet(encoder_name=encoder_name, encoder_weights=encoder_weights, classes=num_classes)
-    elif model_name == "FPN":
-        return smp.FPN(encoder_name=encoder_name, encoder_weights=encoder_weights, classes=num_classes)
-    elif model_name == "PSPNet":
-        return smp.PSPNet(encoder_name=encoder_name, encoder_weights=encoder_weights, classes=num_classes)
-    elif model_name == "PAN":
-        return smp.PAN(encoder_name=encoder_name, encoder_weights=encoder_weights, classes=num_classes)
-    elif model_name == "UPerNet":
-        return smp.UPerNet(encoder_name=encoder_name, encoder_weights=encoder_weights, classes=num_classes)
+    model_name_map = {
+        "Unet++": "UnetPlusPlus",  # Add a mapping for "Unet++"
+        "UNet": "Unet",
+        "MAnet": "MAnet",
+        "Linknet": "Linknet",
+        "FPN": "FPN",
+        "PSPNet": "PSPNet",
+        "PAN": "PAN",
+        "DeepLabV3": "DeepLabV3",
+        "DeepLabV3Plus": "DeepLabV3Plus",
+        "UPerNet": "UPerNet",
+    }
+    mapped_model_name = model_name_map.get(model_name)
+    if mapped_model_name and mapped_model_name in smp.__dict__:
+        return smp.__dict__[mapped_model_name](
+            encoder_name=encoder_name,
+            encoder_weights=encoder_weights,
+            classes=num_classes
+        )
     else:
         raise ValueError(f"Unsupported model name: {model_name}")

@@ -1,23 +1,15 @@
 import pytorch_lightning as pl
-import segmentation_models_pytorch as smp
 import torch
-import torch.nn as nn
+import torch.nn.functional as F
 from torchmetrics.classification import MulticlassAccuracy
 
 class CustomLightningModule(pl.LightningModule):
-    def __init__(self, model_name, encoder_name, encoder_weights, classes, lr):
+    def __init__(self, model, lr):
         super(CustomLightningModule, self).__init__()
-        self.save_hyperparameters()
-        self.model = smp.Unet(
-            encoder_name=encoder_name,
-            encoder_weights=encoder_weights,
-            classes=classes,
-            activation=None
-        )
-        self.loss_fn = nn.BCEWithLogitsLoss()
+        self.model = model
         self.lr = lr
-        self.train_acc = MulticlassAccuracy(num_classes=classes)
-        self.val_acc = MulticlassAccuracy(num_classes=classes)
+        self.train_acc = MulticlassAccuracy(num_classes=self.model.classes, average="macro")
+        self.valid_acc = MulticlassAccuracy(num_classes=self.model.classes, average="macro")
 
     def forward(self, x):
         return self.model(x)
@@ -25,19 +17,19 @@ class CustomLightningModule(pl.LightningModule):
     def training_step(self, batch, batch_idx):
         images, masks = batch
         outputs = self.model(images)
-        loss = self.loss_fn(outputs, masks)
-        self.log("train_loss", loss, on_step=True, on_epoch=True, prog_bar=True)
-        acc = self.train_acc(torch.sigmoid(outputs), masks.int())
-        self.log("train_acc", acc, on_step=True, on_epoch=True, prog_bar=True)
+        loss = F.cross_entropy(outputs, masks)
+        self.log("train_loss", loss, prog_bar=True, logger=True)
+        acc = self.train_acc(outputs.argmax(dim=1), masks)
+        self.log("train_acc", acc, prog_bar=True, logger=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
         images, masks = batch
         outputs = self.model(images)
-        loss = self.loss_fn(outputs, masks)
-        self.log("val_loss", loss, on_step=False, on_epoch=True, prog_bar=True)
-        acc = self.val_acc(torch.sigmoid(outputs), masks.int())
-        self.log("val_acc", acc, on_step=False, on_epoch=True, prog_bar=True)
+        loss = F.cross_entropy(outputs, masks)
+        self.log("val_loss", loss, prog_bar=True, logger=True)
+        acc = self.valid_acc(outputs.argmax(dim=1), masks)
+        self.log("val_acc", acc, prog_bar=True, logger=True)
         return loss
 
     def configure_optimizers(self):
