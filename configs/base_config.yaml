@@ -1,18 +1,30 @@
-checkpoint_dir: ./checkpoints
-checkpoint_file: fcn_resnet50_best_model.pt
-project_name: project4_test_run
-
-#----------------------------------#
-run_name: test yaml
-
-seed: 42
-
-batch_size: 20
-num_workers: 8
-
-lr: 1e-4
-
 input_size: 512
 max_epoch: 5
 valid_interval: 1
 validation: 15
+
+# 모델 관련 설정
+model_name: DeepLabV3Plus       # 사용할 모델 이름
+encoder_name: resnet50          # 인코더 이름
+encoder_weights: imagenet       # 사전 학습 가중치
+
+# 프로젝트 및 실행 설정
+project_name: project4_test_run
+run_name: test_yaml
+
+# 데이터 경로
+image_root: /path/to/images      # 이미지 데이터 경로
+label_root: /path/to/labels      # 라벨 데이터 경로
+
+# 학습 설정
+seed: 42                        # 시드 값
+batch_size: 20                  # 배치 크기
+num_workers: 8                  # DataLoader에서 사용할 워커 수
+lr: 1e-4                        # 학습률
+input_size: 512                 # 입력 이미지 크기
+max_epoch: 5                    # 최대 에폭 수
+valid_interval: 1               # 검증 주기 (에폭 단위)
+
+# 체크포인트 설정
+checkpoint_dir: ./checkpoints   # 체크포인트 저장 경로
+checkpoint_file: best_model.pt  # 체크포인트 파일 이름

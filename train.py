@@ -1,73 +1,41 @@
 from configs.config_factory import get_config
-from utils.utils import get_sorted_files_by_type, set_seed
 from utils.Gsheet import Gsheet_param
-from xraydataset import XRayDataset, split_data
+from module.dataset import CustomDataModule
+from module.trainer import CustomLightningModule
 
-import torch.nn as nn
-from torch.utils.data import DataLoader
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
-import albumentations as A
 from omegaconf import OmegaConf
 from argparse import ArgumentParser
-import os
 import torch
 
 def train_model(config):
     model_config = get_config(config['model_name'])
     seed_everything(config['seed'])
-    set_seed(config['seed'])
 
     wandb_logger = WandbLogger(project=config['project_name'], name=config['run_name'], config=config)
 
-    image_root = config['image_root']
-    label_root = config['label_root']
-    pngs = get_sorted_files_by_type(image_root, 'png')
-    jsons = get_sorted_files_by_type(label_root, 'json')
-
-    train_files, valid_files = split_data(pngs, jsons)
-
-    train_dataset = XRayDataset(
-        image_files=train_files['filenames'], 
-        label_files=train_files['labelnames'], 
-        transforms=A.Resize(config['input_size'], config['input_size'])
-    )
-    valid_dataset = XRayDataset(
-        image_files=valid_files['filenames'], 
-        label_files=valid_files['labelnames'], 
-        transforms=A.Resize(config['input_size'], config['input_size'])
-    )
-
-    train_loader = DataLoader(
-        dataset=train_dataset, 
+    data_module = CustomDataModule(
+        image_root=config['image_root'],
+        label_root=config['label_root'],
         batch_size=config['batch_size'],
-        shuffle=True,
         num_workers=config['num_workers'],
-        drop_last=True,
+        transforms=config['transforms']
     )
-    valid_loader = DataLoader(
-        dataset=valid_dataset, 
-        batch_size=config['valid_batch_size'],
-        shuffle=False,
-        num_workers=2,
-        drop_last=False
-    )
+    data_module.setup()
 
-    criterion = nn.BCEWithLogitsLoss()
-    seg_model = SegmentationModel(
-        model_name=model_config.model_name,
+    seg_model = CustomLightningModule(
         encoder_name=model_config.encoder_name,
         encoder_weights=model_config.encoder_weights,
-        num_classes=model_config.classes,
-        criterion=criterion,
-        learning_rate=config['lr']
+        classes=model_config.classes,
+        lr=config['lr']
     )
 
     checkpoint_callback = ModelCheckpoint(
         dirpath=config['checkpoint_dir'],
         filename=f'{model_config.model_name}_best_model',
-        monitor='val/dice',
+        monitor='val_dice',
         mode='max',
         save_top_k=3
     )
@@ -82,7 +50,7 @@ def train_model(config):
         devices=1 if torch.cuda.is_available() else None
     )
 
-    trainer.fit(seg_model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
+    trainer.fit(seg_model, datamodule=data_module)
 
 if __name__ == '__main__':
     parser = ArgumentParser()
@@ -90,5 +58,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     cfg = OmegaConf.load(args.config)
+
     train_model(cfg)
+
     Gsheet_param(cfg)
