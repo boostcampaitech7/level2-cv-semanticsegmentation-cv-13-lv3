@@ -6,36 +6,32 @@ from torch.utils.data import Dataset, DataLoader
 import pytorch_lightning as pl
 
 class XRayDataset(Dataset):
-    def __init__(self, image_root, label_root, is_train=True, transforms=None, clahe=False, copypaste=False):
+    def __init__(self, image_root, label_root, is_train=True, transforms=None, augments=None):
         self.image_root = image_root
         self.label_root = label_root
         self.transforms = transforms
         self.is_train = is_train
-        self.clahe = clahe
-        self.copypaste = copypaste
+        self.augments = augments  # 추가된 부분
         self.images = sorted([os.path.join(image_root, img) for img in os.listdir(image_root)])
         self.labels = sorted([os.path.join(label_root, lbl) for lbl in os.listdir(label_root)])
-
-    def __len__(self):
-        return len(self.images)
 
     def __getitem__(self, idx):
         img_path = self.images[idx]
         lbl_path = self.labels[idx]
         
-        # Load image and label
         image = cv2.imread(img_path)
         label = cv2.imread(lbl_path, cv2.IMREAD_GRAYSCALE)
 
-        # CLAHE (if enabled)
-        if self.clahe:
-            clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-            image = clahe.apply(image)
-
-        # Apply transformations
+        # Albumentations transformations
         if self.transforms:
             augmented = self.transforms(image=image, mask=label)
             image, label = augmented['image'], augmented['mask']
+
+        # Custom augmentations
+        if self.augments:
+            for augment in self.augments:
+                if callable(augment):
+                    image, label = augment(image, label)
 
         return image, label
 
