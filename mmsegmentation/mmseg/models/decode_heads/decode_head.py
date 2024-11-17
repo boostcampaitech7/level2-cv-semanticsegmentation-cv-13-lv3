@@ -313,7 +313,8 @@ class BaseDecodeHead(BaseModule, metaclass=ABCMeta):
             seg_weight = self.sampler.sample(seg_logits, seg_label)
         else:
             seg_weight = None
-        seg_label = seg_label.squeeze(1)
+            
+        #seg_label = seg_label.squeeze(1)
 
         if not isinstance(self.loss_decode, nn.ModuleList):
             losses_decode = [self.loss_decode]
@@ -333,8 +334,8 @@ class BaseDecodeHead(BaseModule, metaclass=ABCMeta):
                     weight=seg_weight,
                     ignore_index=self.ignore_index)
 
-        loss['acc_seg'] = multi_class_accuracy(
-            seg_logits, seg_label, ignore_index=self.ignore_index)
+        # loss['acc_seg'] = multi_class_accuracy(
+        #     seg_logits, seg_label, ignore_index=self.ignore_index)
         return loss
 
     def predict_by_feat(self, seg_logits: Tensor,

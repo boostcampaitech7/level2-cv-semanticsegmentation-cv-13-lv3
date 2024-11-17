@@ -1,9 +1,6 @@
 
 dataset_type = 'XRayDataset'
 
-data_root = '../data/train/'
-data_prefix=dict(img_path='DCM', seg_map_path='outputs_json')
-
 train_pipeline = [
             dict(type='LoadImageFromFile'),
             dict(type='LoadXRayAnnotations'),
@@ -14,7 +11,7 @@ train_pipeline = [
         ]
 test_pipeline = [
             dict(type='LoadImageFromFile'),
-            # dict(type='Resize', scale=(1450, 1450)),
+            dict(type='Resize', scale=(512, 512)),
             dict(type='LoadXRayAnnotations'),
             dict(type='TransposeAnnotations'),
             dict(type='PackSegInputs')
@@ -43,8 +40,8 @@ train_dataloader = dict(
     sampler=dict(type='InfiniteSampler', shuffle=True),
     dataset=dict(
         type=dataset_type,
-        data_root = data_root,
-        data_prefix=data_prefix,
+        image_files=[],
+        label_files=[],
         pipeline=train_pipeline))
 val_dataloader = dict(
     batch_size=1,
@@ -52,8 +49,8 @@ val_dataloader = dict(
     sampler=dict(type='DefaultSampler', shuffle=False),
     dataset=dict(
         type=dataset_type,
-        data_root = data_root,
-        data_prefix=data_prefix,
+        image_files=[],
+        label_files=[],
         pipeline=test_pipeline))
 test_dataloader = val_dataloader
 
