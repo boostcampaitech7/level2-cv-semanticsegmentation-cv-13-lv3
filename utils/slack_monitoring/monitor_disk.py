@@ -24,7 +24,7 @@ TARGET_MOUNT = "/data/ephemeral"  # 모니터링할 대상 경로
 last_usage = None  # 이전 디스크 상태 기록
 
 # 데이터 저장 경로 설정
-LOG_DIR = "gpu_monitor_data"
+LOG_DIR = "monitor_log"
 LOG_FILE = os.path.join(LOG_DIR, "disk_status.log")
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -71,7 +71,7 @@ def monitor_disk():
         # 첫 실행 시 상태 보고
         if first_run:
             initial_message = (
-                f"🖥️ *{SERVER_NAME}*\n🔍 디스크 초기 상태:\n"
+                f"🔍 디스크 초기 상태:\n"
                 f"- 전체 용량: {current_usage['size']}\n"
                 f"- 사용 중: {current_usage['used']}\n"
                 f"- 가용 용량: {current_usage['avail']}\n"

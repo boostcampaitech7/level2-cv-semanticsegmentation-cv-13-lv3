@@ -61,7 +61,7 @@ def monitor_gpu():
 
         # 첫 실행 시 상태 보고
         if first_run:
-            initial_message = f"🖥️ *{SERVER_NAME}*\n🔍 GPU 초기 상태: {used}MB / {total}MB"
+            initial_message = f"🔍 GPU 초기 상태: {used}MB / {total}MB"
             send_to_slack(initial_message)
             save_to_file(initial_message)
             first_run = False
