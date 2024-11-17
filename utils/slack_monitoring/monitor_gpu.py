@@ -50,6 +50,7 @@ def send_to_slack(message):
 def monitor_gpu():
     global alert_sent_for_idle
     previous_used = None
+    first_run = True  # 첫 실행 여부 플래그
 
     while True:
         used, total = get_gpu_memory()
@@ -57,6 +58,13 @@ def monitor_gpu():
             print("GPU가 감지되지 않았습니다.")
             time.sleep(CHECK_INTERVAL)
             continue
+
+        # 첫 실행 시 상태 보고
+        if first_run:
+            initial_message = f"🖥️ *{SERVER_NAME}*\n🔍 GPU 초기 상태: {used}MB / {total}MB"
+            send_to_slack(initial_message)
+            save_to_file(initial_message)
+            first_run = False
 
         # GPU 상태 메시지 생성
         if used > 0:

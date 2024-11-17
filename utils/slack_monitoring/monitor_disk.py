@@ -60,6 +60,7 @@ def send_to_slack(message):
 
 def monitor_disk():
     global last_usage
+    first_run = True  # 첫 실행 여부 플래그
     while True:
         current_usage = get_disk_usage(TARGET_MOUNT)
         if not current_usage:
@@ -67,13 +68,25 @@ def monitor_disk():
             time.sleep(CHECK_INTERVAL)
             continue
 
+        # 첫 실행 시 상태 보고
+        if first_run:
+            initial_message = (
+                f"🖥️ *{SERVER_NAME}*\n🔍 디스크 초기 상태:\n"
+                f"- 전체 용량: {current_usage['size']}\n"
+                f"- 사용 중: {current_usage['used']}\n"
+                f"- 가용 용량: {current_usage['avail']}\n"
+                f"- 점유율: {current_usage['percent']}%"
+            )
+            send_to_slack(initial_message)
+            save_to_file(initial_message)
+            first_run = False
+
         alerts = []
 
         # 임계치 초과 알림
         if current_usage["percent"] >= THRESHOLD_PERCENT:
             alerts.append(
-                #f"⚠️ {current_usage['mount']} 디스크 사용량이 임계치({THRESHOLD_PERCENT}%)를 초과했습니다!\n"
-                f"⚠️ home 디스크 사용량이 임계치({THRESHOLD_PERCENT}%)를 초과했습니다!\n"
+                f"⚠️ {current_usage['mount']} 디스크 사용량이 임계치({THRESHOLD_PERCENT}%)를 초과했습니다!\n"
                 f"현재 점유율: {current_usage['percent']}%"
             )
 
@@ -84,12 +97,12 @@ def monitor_disk():
 
             if change >= INCREASE_THRESHOLD:
                 alerts.append(
-                    f"🔼 home 디스크 사용량이 {change}% 증가했습니다.\n"
+                    f"🔼 {current_usage['mount']} 디스크 사용량이 {change}% 증가했습니다.\n"
                     f"이전 점유율: {prev_percent}% → 현재 점유율: {current_usage['percent']}%"
                 )
             elif change <= -DECREASE_THRESHOLD:
                 alerts.append(
-                    f"🔽 home 디스크 사용량이 {-change}% 감소했습니다.\n"
+                    f"🔽 {current_usage['mount']} 디스크 사용량이 {-change}% 감소했습니다.\n"
                     f"이전 점유율: {prev_percent}% → 현재 점유율: {current_usage['percent']}%"
                 )
 
