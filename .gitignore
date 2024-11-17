@@ -3,3 +3,4 @@ checkpoints/
 lightning_logs/
 wandb/
 visualize/
+inference/

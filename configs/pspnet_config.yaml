@@ -1,19 +1,19 @@
-checkpoint_dir: ./checkpoints/pspnet
-checkpoint_file: pspnet_resnet50_best_model.pt
+checkpoint_dir: ./checkpoints/pspnet/effi_b7/1e-5
+checkpoint_file: pspnet_effi_best_model_1e-5
 project_name: PSPNet
 
 #----------------------------------#
-run_name: resnet50_adamw_100ep
+run_name: effi_b7_adamw_16bs_400ep_lr-down
 
 seed: 42
 
-batch_size: 32
+batch_size: 16
 num_workers: 8
 
-lr: 1e-4
+lr: 5e-5
 
 input_size: 512
-max_epoch: 100
+max_epoch: 400
 valid_interval: 5
 
 amp: True

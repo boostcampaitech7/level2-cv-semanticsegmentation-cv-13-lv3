@@ -10,7 +10,7 @@ import os
 import pandas as pd
 
 #from model import load_model
-from psp_model import load_model
+from psp_effi_model import load_model
 
 class SegmentationModel(LightningModule):
     def __init__(self, criterion, learning_rate, thr=0.5):
@@ -102,7 +102,7 @@ class SegmentationModel(LightningModule):
             "class": classes,
             "rle": self.rles,
         })
-        df.to_csv("output.csv", index=False)
+        df.to_csv("inference/PSPNet_effib7_bs16_1e-5_400ep.csv", index=False)
         print("Test results saved to output.csv")
 
     def configure_optimizers(self):  
