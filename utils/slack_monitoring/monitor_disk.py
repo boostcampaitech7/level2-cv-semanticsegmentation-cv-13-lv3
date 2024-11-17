@@ -5,7 +5,7 @@ import time
 from dotenv import load_dotenv
 
 # .env 파일 로드
-load_dotenv('server_ex.env')
+load_dotenv()
 
 # 환경 변수 읽기
 WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
@@ -16,14 +16,15 @@ if not WEBHOOK_URL:
 
 # 설정 값
 CHECK_INTERVAL = 300  # 5분 간격
-THRESHOLD_PERCENT = 90  # 디스크 사용량 임계치 (%)
+THRESHOLD_PERCENT = 95  # 디스크 사용량 임계치 (%)
 INCREASE_THRESHOLD = 10  # 이전 상태 대비 % 증가 임계치
+DECREASE_THRESHOLD = 10  # 이전 상태 대비 % 감소 임계치
 TARGET_MOUNT = "/data/ephemeral"  # 모니터링할 대상 경로
 
 last_usage = None  # 이전 디스크 상태 기록
 
 # 데이터 저장 경로 설정
-LOG_DIR = "monitor_log"
+LOG_DIR = "gpu_monitor_data"
 LOG_FILE = os.path.join(LOG_DIR, "disk_status.log")
 os.makedirs(LOG_DIR, exist_ok=True)
 
@@ -66,31 +67,37 @@ def monitor_disk():
             time.sleep(CHECK_INTERVAL)
             continue
 
-        # 알림 메시지 생성
-        message = (
-            f"📊 *{current_usage['mount']}* 디스크 상태:\n"
-            f"- 전체 용량: {current_usage['size']}\n"
-            f"- 사용 중: {current_usage['used']}\n"
-            f"- 가용 용량: {current_usage['avail']}\n"
-            f"- 점유율: {current_usage['percent']}%"
-        )
-
         alerts = []
-        if current_usage["percent"] >= THRESHOLD_PERCENT:
-            alerts.append("⚠️ 90% 초과! 디스크 점유율이 높습니다. ⚠️")
 
-        # 이전 사용량 대비 증가 여부 확인
+        # 임계치 초과 알림
+        if current_usage["percent"] >= THRESHOLD_PERCENT:
+            alerts.append(
+                #f"⚠️ {current_usage['mount']} 디스크 사용량이 임계치({THRESHOLD_PERCENT}%)를 초과했습니다!\n"
+                f"⚠️ home 디스크 사용량이 임계치({THRESHOLD_PERCENT}%)를 초과했습니다!\n"
+                f"현재 점유율: {current_usage['percent']}%"
+            )
+
+        # 이전 사용량 대비 증가/감소 알림
         if last_usage:
             prev_percent = last_usage["percent"]
-            increase = current_usage["percent"] - prev_percent
-            if increase > 0:
-                alerts.append(f"🔼 이전보다 {increase}% 증가했습니다. 🔼")
+            change = current_usage["percent"] - prev_percent
 
-        # 최종 메시지 생성 및 전송
+            if change >= INCREASE_THRESHOLD:
+                alerts.append(
+                    f"🔼 home 디스크 사용량이 {change}% 증가했습니다.\n"
+                    f"이전 점유율: {prev_percent}% → 현재 점유율: {current_usage['percent']}%"
+                )
+            elif change <= -DECREASE_THRESHOLD:
+                alerts.append(
+                    f"🔽 home 디스크 사용량이 {-change}% 감소했습니다.\n"
+                    f"이전 점유율: {prev_percent}% → 현재 점유율: {current_usage['percent']}%"
+                )
+
+        # 슬랙 및 로그 파일로 알림 전송
         if alerts:
-            message += "\n" + "\n".join(alerts)
-        send_to_slack(message)
-        save_to_file(message)
+            message = "\n".join(alerts)
+            send_to_slack(message)
+            save_to_file(message)
 
         # 상태 갱신
         last_usage = current_usage
