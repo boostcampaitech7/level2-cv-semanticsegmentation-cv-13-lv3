@@ -2,6 +2,15 @@ __pycache__/
 checkpoints/
 lightning_logs/
 wandb/
-monitoring/disk_monitor_data
-monitoring/gpu_monitor_data
+
 *.env
+
+
+
+
+
+
+
+
+
+utils/slack_monitoring/monitor_log
