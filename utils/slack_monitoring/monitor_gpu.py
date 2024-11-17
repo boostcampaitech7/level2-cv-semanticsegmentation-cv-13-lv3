@@ -55,7 +55,7 @@ def monitor_gpu():
     while True:
         used, total = get_gpu_memory()
         if total == 0:
-            print("GPU가 감지되지 않았습니다.")
+            print("[GPU Monitor] GPU가 감지되지 않았습니다.")
             time.sleep(CHECK_INTERVAL)
             continue
 
@@ -66,19 +66,10 @@ def monitor_gpu():
             save_to_file(initial_message)
             first_run = False
 
-        # GPU 상태 메시지 생성
-        if used > 0:
-            if previous_used == 0 and not alert_sent_for_idle:
-                # GPU 사용량이 0 → 증가: 학습 시작 메시지
-                start_message = (
-                    f"🔄 학습이 시작되었습니다! 🔄"
-                    f"🔹 GPU 사용량: {used}MB / {total}MB\n"
-                )
-                send_to_slack(start_message)
-                save_to_file(start_message)
-            alert_sent_for_idle = False  # 사용 중이라면 사용 가능 플래그 초기화
-
-            if previous_used is not None and previous_used != used:  # 변화가 있는 경우
+        # 사용량 변동 감지 및 임계치 조건 추가
+        if previous_used is not None:
+            change = abs(used - previous_used)  # 사용량 변화 계산
+            if change >= ALERT_THRESHOLD:  # ALERT_THRESHOLD = 5000
                 change_message = (
                     f"🔹 GPU 사용량: {used}MB / {total}MB\n"
                     f"이전 사용량: {previous_used}MB → 현재 사용량: {used}MB"
@@ -86,12 +77,21 @@ def monitor_gpu():
                 send_to_slack(change_message)
                 save_to_file(change_message)
 
-        elif used == 0 and not alert_sent_for_idle:
-            # 사용 가능 상태 메시지 (한 번만 전송)
+        # GPU 사용량이 0인 경우 학습 완료 알림
+        if used == 0 and not alert_sent_for_idle:
             complete_message = f"✅ GPU 메모리 0MB - 학습 완료, 서버 사용 가능!"
             send_to_slack(complete_message)
             save_to_file(complete_message)
             alert_sent_for_idle = True
+
+        # GPU 사용량이 0에서 증가한 경우 학습 시작 알림
+        if used > 0 and previous_used == 0 and not alert_sent_for_idle:
+            start_message = (
+                f"🔄 학습이 시작되었습니다!\n🔹 GPU 사용량: {used}MB / {total}MB"
+            )
+            send_to_slack(start_message)
+            save_to_file(start_message)
+            alert_sent_for_idle = False
 
         previous_used = used
         time.sleep(CHECK_INTERVAL)
