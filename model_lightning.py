@@ -4,7 +4,7 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 from lightning import LightningModule
-from utils.utils import dice_coef, encode_mask_to_rle
+from utils import dice_coef, encode_mask_to_rle
 
 import os
 import pandas as pd
@@ -12,48 +12,35 @@ import pandas as pd
 from model import load_model
 
 class SegmentationModel(LightningModule):
-    def __init__(self, criterion, learning_rate, thr=0.5):
-        super(SegmentationModel, self).__init__()
-        self.model = load_model()
+    def __init__(self, criterion, learning_rate):
+        super().__init__()
+        self.model = load_model()  
         self.criterion = criterion
         self.lr = learning_rate
-        self.thr = thr
-        self.best_dice = 0.0
-        self.validation_dices = []  # validation_step 출력을 저장할 리스트
-
-        self.rles = []
-        self.filename_and_class = []
-
-        self.save_hyperparameters()
 
     def forward(self, x):
-        return self.model(x)
+        outputs = self.model(x)
+        return outputs.logits  # Segformer는 logits 속성에 예측 결과를 저장
 
     def training_step(self, batch, batch_idx):
-        _, images, masks = batch
-        outputs = self(images)
-        loss = self.criterion(outputs, masks)
-        self.log('train/loss', loss, on_step=True, on_epoch=False)
+        _, images, labels = batch
+        logits = self(images)
+        loss = self.criterion(logits, labels)
+        self.log("train/loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        _, images, masks = batch
-        outputs = self(images)
-        
-        # 크기 보정
-        if outputs.size(-2) != masks.size(-2) or outputs.size(-1) != masks.size(-1):
-            outputs = F.interpolate(outputs, size=masks.shape[-2:], mode="bilinear")
+        _, images, labels = batch
+        logits = self(images)
+        print(f"Logits size: {logits.size()}")
+        print(f"Labels size: {labels.size()}")
+        loss = self.criterion(logits, labels)
+        self.log("val/loss", loss, prog_bar=True)
+        return loss
 
-        loss = self.criterion(outputs, masks)
-        self.log('val/loss', loss, prog_bar=True, on_step=True, on_epoch=False)
-
-        outputs = torch.sigmoid(outputs)
-        outputs = (outputs > self.thr)
-        masks = masks
-        
-        dice = dice_coef(outputs, masks).detach().cpu()
-        self.validation_dices.append(dice)  # dice score 저장
-        return dice
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(params=self.model.parameters(), lr=self.lr, weight_decay=1e-6)
+        return optimizer
 
     def on_validation_epoch_end(self):
         dices = torch.cat(self.validation_dices, 0)

@@ -13,29 +13,23 @@ from constants import CLASSES, CLASS2IND
 import albumentations as A
 
 def split_data(pngs, jsons, K=5, valid_idx=5):
+    if not pngs or not jsons:
+        raise ValueError(f"No image or label files found. Images: {len(pngs)}, Labels: {len(jsons)}")
 
     assert valid_idx <= K
 
     _filenames = np.array(pngs)
     _labelnames = np.array(jsons)
 
-    # split train-valid
-    # 한 폴더 안에 한 인물의 양손에 대한 `.dcm` 파일이 존재하기 때문에
-    # 폴더 이름을 그룹으로 해서 GroupKFold를 수행합니다.
-    # 동일 인물의 손이 train, valid에 따로 들어가는 것을 방지합니다.
     groups = [os.path.dirname(fname) for fname in _filenames]
-
-    # dummy label
     ys = [0 for fname in _filenames]
 
-    # 전체 데이터의 20%를 validation data로 쓰기 위해 `n_splits`를
-    # 5으로 설정하여 KFold를 수행합니다.
-    gkf = GroupKFold(n_splits=K)
+    gkf = GroupKFold(n_splits=min(K, len(_filenames)))
 
-    train_datalist, valid_datalist = dict(filenames = [], labelnames = []), dict(filenames = [], labelnames = [])
+    train_datalist, valid_datalist = dict(filenames=[], labelnames=[]), dict(filenames=[], labelnames=[])
 
     for idx, (x, y) in enumerate(gkf.split(_filenames, ys, groups)):
-        if idx+1 == valid_idx:
+        if idx + 1 == valid_idx:
             valid_datalist['filenames'] += list(_filenames[y])
             valid_datalist['labelnames'] += list(_labelnames[y])
         else:
@@ -90,7 +84,12 @@ class XRayDataset(Dataset):
             image = result["image"]
             label = result["mask"] if self.label_files else label
 
+        output_size = (128, 128)  # 모델 출력 크기
+        resized_label = np.zeros((len(CLASSES), *output_size), dtype=np.uint8)
+        for i in range(len(CLASSES)):
+            resized_label[i] = cv2.resize(label[..., i], output_size, interpolation=cv2.INTER_NEAREST)
+
         image = torch.from_numpy(image.transpose(2, 0, 1)).float()
-        label = torch.from_numpy(label.transpose(2, 0, 1)).float() if self.label_files else None
+        label = torch.from_numpy(resized_label).float() if self.label_files else None
 
         return (image_name, image, label) if label is not None else (image_name, image)
