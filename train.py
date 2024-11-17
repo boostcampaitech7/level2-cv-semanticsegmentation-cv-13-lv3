@@ -13,6 +13,7 @@ from omegaconf import OmegaConf
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
+import wandb
 from utils.Gsheet import Gsheet_param
 
 # 모델 학습과 검증을 수행하는 함수
@@ -29,7 +30,15 @@ def train_model(args):
     # model = models.segmentation.fcn_resnet50(pretrained=True)
     # # output class 개수를 dataset에 맞도록 수정합니다.
     # model.classifier[4] = nn.Conv2d(512, len(CLASSES), kernel_size=1)
-
+    checkpoint_callback = ModelCheckpoint(
+        dirpath=args.checkpoint_dir,
+        filename=args.checkpoint_file,
+        monitor='val/loss',  # 검증 손실을 기준으로 체크포인트 저장
+        mode='min',
+        save_top_k=3,
+        save_weights_only=True  # WandB에 업로드할 용도로 모델 가중치만 저장
+    )
+    
     image_root = os.path.join(TRAIN_DATA_DIR, 'DCM')
     label_root = os.path.join(TRAIN_DATA_DIR, 'outputs_json')
 
@@ -86,7 +95,7 @@ def train_model(args):
 
     # 학습 시작
     trainer.fit(seg_model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
-
+    wandb.save(os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}.ckpt"))
 
 if __name__ == '__main__':
     parser = ArgumentParser()
