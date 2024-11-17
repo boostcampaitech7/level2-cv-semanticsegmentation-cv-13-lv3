@@ -9,13 +9,44 @@ train_pipeline = [
             dict(type='TransposeAnnotations'),
             dict(type='PackSegInputs')
         ]
-test_pipeline = [
+
+train_dataloader = dict(
+    batch_size=1,
+    num_workers=1,
+    # persistent_workers=True,
+    sampler=dict(type='InfiniteSampler', shuffle=True),
+    dataset=dict(
+        type=dataset_type,
+        image_files=[],
+        label_files=[],
+        pipeline=train_pipeline))
+
+valid_pipeline = [
             dict(type='LoadImageFromFile'),
             dict(type='Resize', scale=(512, 512)),
             dict(type='LoadXRayAnnotations'),
             dict(type='TransposeAnnotations'),
             dict(type='PackSegInputs')
         ]
+
+val_dataloader = dict(
+    batch_size=1,
+    num_workers=0,
+    sampler=dict(type='DefaultSampler', shuffle=False),
+    dataset=dict(
+        type=dataset_type,
+        image_files=[],
+        label_files=[],
+        pipeline=valid_pipeline))
+val_evaluator = dict(type='DiceMetric')
+
+
+test_pipeline = [
+            dict(type='LoadImageFromFile'),
+            #dict(type='Resize', scale=(512, 512)),
+            dict(type='PackSegInputs')
+        ]
+
 img_ratios = [0.5, 0.75, 1.0, 1.25, 1.5, 1.75]
 tta_pipeline = [
     dict(type='LoadImageFromFile', backend_args=None),
@@ -33,26 +64,15 @@ tta_pipeline = [
         ])
 ]
 
-train_dataloader = dict(
-    batch_size=1,
-    num_workers=1,
-    # persistent_workers=True,
-    sampler=dict(type='InfiniteSampler', shuffle=True),
-    dataset=dict(
-        type=dataset_type,
-        image_files=[],
-        label_files=[],
-        pipeline=train_pipeline))
-val_dataloader = dict(
-    batch_size=1,
-    num_workers=0,
+test_dataloader = dict(
+    batch_size=2,
+    num_workers=3,
     sampler=dict(type='DefaultSampler', shuffle=False),
     dataset=dict(
         type=dataset_type,
         image_files=[],
-        label_files=[],
-        pipeline=test_pipeline))
-test_dataloader = val_dataloader
-
-val_evaluator = dict(type='DiceMetric')
-test_evaluator = dict(type='DiceMetric')
+        label_files=None,
+        pipeline=test_pipeline
+    )
+)
+test_evaluator = dict(type='RLEncoding')

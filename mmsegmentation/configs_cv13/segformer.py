@@ -22,6 +22,7 @@ model = dict(
     decode_head=dict(
         type='SegformerHead',
         num_classes=29,
+        threshold=0.5,
         loss_decode=dict(
             use_sigmoid=True,
         )))

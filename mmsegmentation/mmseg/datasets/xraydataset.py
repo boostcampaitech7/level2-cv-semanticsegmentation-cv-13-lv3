@@ -43,10 +43,10 @@ class XRayDataset(BaseSegDataset):
         
         data_list = []
 
-        for idx, (img, ann) in enumerate(zip(self.image_files, self.label_files)):
+        for idx, (img) in enumerate(self.image_files):
             data_info = dict(img_path = img)
             if self.label_files is not None:
-                data_info['seg_map_path'] = ann
+                data_info['seg_map_path'] = self.label_files[idx]
             data_info['label_map'] = self.label_map
             data_info['reduce_zero_label'] = self.reduce_zero_label
             data_info['image_size'] = self._metainfo.get('image_size', (2048, 2048))

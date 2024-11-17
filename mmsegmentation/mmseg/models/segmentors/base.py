@@ -158,8 +158,7 @@ class BaseSegmentor(BaseModel, metaclass=ABCMeta):
                     padding_size = img_meta.get('padding_size', [0] * 4)
                 else:
                     padding_size = img_meta['img_padding_size']
-                padding_left, padding_right, padding_top, padding_bottom =\
-                    padding_size
+                padding_left, padding_right, padding_top, padding_bottom = padding_size
                 # i_seg_logits shape is 1, C, H, W after remove padding
                 i_seg_logits = seg_logits[i:i + 1, :,
                                           padding_top:H - padding_bottom,
@@ -183,18 +182,16 @@ class BaseSegmentor(BaseModel, metaclass=ABCMeta):
                     warning=False).squeeze(0)
             else:
                 i_seg_logits = seg_logits[i]
-
-            if C > 1:
-                i_seg_pred = i_seg_logits.argmax(dim=0, keepdim=True)
-            else:
-                i_seg_logits = i_seg_logits.sigmoid()
-                i_seg_pred = (i_seg_logits >
-                              self.decode_head.threshold).to(i_seg_logits)
+            # if C > 1:
+            #     i_seg_pred = i_seg_logits.argmax(dim=0, keepdim=True)
+            i_seg_logits = i_seg_logits.sigmoid()
+            i_seg_pred = (i_seg_logits >
+                            self.decode_head.threshold).to(i_seg_logits)
             data_samples[i].set_data({
                 'seg_logits':
                 PixelData(**{'data': i_seg_logits}),
                 'pred_sem_seg':
                 PixelData(**{'data': i_seg_pred})
             })
-
+            
         return data_samples
