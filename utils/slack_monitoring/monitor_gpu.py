@@ -82,14 +82,19 @@ def monitor_gpu():
 
         # GPU 사용량이 0에서 증가한 경우 처리 (학습 시작)
         if used > 0 and previous_used == 0 and alert_sent_for_idle:
-            start_message = (
-                f"🔄 <{SERVER_NAME}>에서 학습이 시작되었습니다!\n"
-                f"🔹 GPU 사용량: {used}MB / {total}MB\n"
-                f"이전 사용량: {previous_used}MB → 현재 사용량: {used}MB"
-            )
-            send_to_slack(start_message)
-            save_to_file(start_message)
-            alert_sent_for_idle = False
+            change = abs(used - previous_used)
+            if change >= ALERT_THRESHOLD:  # ALERT_THRESHOLD = 5000
+                start_message = (
+                    f"🔄 <{SERVER_NAME}>에서 학습이 시작되었습니다!\n"
+                    f"🔹 GPU 사용량: {used}MB / {total}MB\n"
+                    f"이전 사용량: {previous_used}MB → 현재 사용량: {used}MB"
+                )
+                send_to_slack(start_message)
+                save_to_file(start_message)
+                alert_sent_for_idle = False
+                previous_used = used  # 상태 업데이트
+            time.sleep(CHECK_INTERVAL)
+            continue  # 학습 시작 메시지 후 나머지 처리 건너뜀
 
         # 사용량 변화 메시지 (임계치 기준)
         if previous_used is not None:
@@ -105,6 +110,7 @@ def monitor_gpu():
         # 상태 업데이트
         previous_used = used
         time.sleep(CHECK_INTERVAL)
+
 
 if __name__ == "__main__":
     monitor_gpu()
