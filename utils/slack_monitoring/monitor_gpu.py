@@ -61,17 +61,17 @@ def monitor_gpu():
 
         # 첫 실행 시 상태 보고
         if first_run:
-            initial_message = f"🔍 GPU 초기 상태: {used}MB / {total}MB"
+            initial_message = f"🔍 GPU 메모리 사용 현황: {used}MB / {total}MB"
             send_to_slack(initial_message)
             save_to_file(initial_message)
             first_run = False
 
-        # 사용량이 0MB로 감소한 경우 처리
+        # 사용량이 0MB로 감소한 경우 처리 (학습 완료)
         if used == 0 and previous_used != 0:
             combined_message = (
                 f"🔹 GPU 사용량: {used}MB / {total}MB\n"
                 f"이전 사용량: {previous_used}MB → 현재 사용량: {used}MB\n"
-                f"✅ GPU 메모리 0MB - {SERVER_NAME} 사용 가능!"
+                f"✅ GPU 메모리 0MB - <{SERVER_NAME}> 사용 가능!"
             )
             send_to_slack(combined_message)
             save_to_file(combined_message)
@@ -80,10 +80,12 @@ def monitor_gpu():
             time.sleep(CHECK_INTERVAL)
             continue
 
-        # GPU 사용량이 0에서 증가한 경우 학습 시작 알림
+        # GPU 사용량이 0에서 증가한 경우 처리 (학습 시작)
         if used > 0 and previous_used == 0 and alert_sent_for_idle:
             start_message = (
-                f"🔄 학습이 시작되었습니다!\n🔹 GPU 사용량: {used}MB / {total}MB"
+                f"🔄 <{SERVER_NAME}>에서 학습이 시작되었습니다!\n"
+                f"🔹 GPU 사용량: {used}MB / {total}MB\n"
+                f"이전 사용량: {previous_used}MB → 현재 사용량: {used}MB"
             )
             send_to_slack(start_message)
             save_to_file(start_message)

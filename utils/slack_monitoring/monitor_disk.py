@@ -71,7 +71,7 @@ def monitor_disk():
         # 첫 실행 시 상태 보고
         if first_run:
             initial_message = (
-                f"🔍 디스크 초기 상태:\n"
+                f"🔍 디스크 사용 현황:\n"
                 f"- 전체 용량: {current_usage['size']}\n"
                 f"- 사용 중: {current_usage['used']}\n"
                 f"- 가용 용량: {current_usage['avail']}\n"
@@ -86,7 +86,7 @@ def monitor_disk():
         # 임계치 초과 알림
         if current_usage["percent"] >= THRESHOLD_PERCENT:
             alerts.append(
-                f"⚠️ {current_usage['mount']} 디스크 사용량이 임계치({THRESHOLD_PERCENT}%)를 초과했습니다!\n"
+                f"⚠️ <{SERVER_NAME}>의 {current_usage['mount']} 디스크 사용량이 임계치({THRESHOLD_PERCENT}%)를 초과했습니다!\n"
                 f"현재 점유율: {current_usage['percent']}%"
             )
 

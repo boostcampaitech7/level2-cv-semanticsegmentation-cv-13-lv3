@@ -16,7 +16,6 @@ if __name__ == "__main__":
     disk_process.start()
     
     print("[Monitor] 모든 모니터링 프로세스가 정상적으로 실행 중입니다.")
-    print("[Monitor] 이제 방치하셔도 됩니다!")
     
     # 프로세스가 종료될 때까지 대기
     gpu_process.join()
