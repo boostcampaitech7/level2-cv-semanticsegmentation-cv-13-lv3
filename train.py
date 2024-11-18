@@ -70,7 +70,7 @@ def train_model(args):
     )
 
     # 모델 초기화
-    seg_model = SegmentationModel(criterion=criterion, learning_rate=args.lr, encoder_name=args.encoder_name, encoder_weight=args.encoder_weight)
+    seg_model = SegmentationModel(criterion=criterion, learning_rate=args.lr,architecture=args.architecture, encoder_name=args.encoder_name, encoder_weight=args.encoder_weight)
 
     # Trainer 설정
     trainer = Trainer(
