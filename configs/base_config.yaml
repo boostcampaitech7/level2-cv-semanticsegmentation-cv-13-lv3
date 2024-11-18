@@ -16,4 +16,7 @@ input_size: 512
 max_epoch: 5
 valid_interval: 1
 
-amp: False
+amp: True
+
+encoder_name: efficientnet-b0
+encoder_weight: imagenet
