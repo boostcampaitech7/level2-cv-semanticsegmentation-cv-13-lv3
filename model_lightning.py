@@ -12,7 +12,7 @@ import pandas as pd
 from model import load_model
 
 class SegmentationModel(LightningModule):
-    def __init__(self, criterion, learning_rate, thr=0.5, architecture="Unet", encoder_name="resnet50", encoder_weight="imagenet"):
+    def __init__(self, criterion, learning_rate, thr=0.5, architecture="SegformerForSemanticSegmentation", encoder_name="resnet50", encoder_weight="imagenet"):
         super(SegmentationModel, self).__init__()
         self.model = load_model(architecture, encoder_name, encoder_weight)
         self.criterion = criterion
@@ -31,14 +31,17 @@ class SegmentationModel(LightningModule):
 
     def training_step(self, batch, batch_idx):
         _, images, masks = batch
-        outputs = self(images)
+        outputs = self(images).logits
+        # 크기 보정
+        if outputs.size(-2) != masks.size(-2) or outputs.size(-1) != masks.size(-1):
+            outputs = F.interpolate(outputs, size=masks.shape[-2:], mode="bilinear")        
         loss = self.criterion(outputs, masks)
         self.log('train/loss', loss, on_step=True, on_epoch=False)
         return loss
 
     def validation_step(self, batch, batch_idx):
         _, images, masks = batch
-        outputs = self(images)
+        outputs = self(images).logits
         
         # 크기 보정
         if outputs.size(-2) != masks.size(-2) or outputs.size(-1) != masks.size(-1):
