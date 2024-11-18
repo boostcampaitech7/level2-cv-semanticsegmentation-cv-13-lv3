@@ -16,7 +16,7 @@ from omegaconf import OmegaConf
 def test_model(args):
 
     # 모델 및 체크포인트 경로 설정
-    checkpoint_path = os.path.join(args.checkpoint_dir, args.checkpoint_file)
+    checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}.ckpt")
     
     seg_model = SegmentationModel.load_from_checkpoint(checkpoint_path=checkpoint_path, criterion=None, learning_rate=None)
 
