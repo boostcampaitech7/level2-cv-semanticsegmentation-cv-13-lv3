@@ -1,6 +1,6 @@
 _base_ = [
     '../configs/_base_/models/segformer_mit-b0.py',
-    './schedule_50epoch.py',
+    './schedule_20k_plateu.py',
     './dataset.py',
     './runtime.py'
 ]
@@ -37,14 +37,3 @@ optim_wrapper = dict(
             'norm': dict(decay_mult=0.),
             'head': dict(lr_mult=10.)
         }))
-
-# learning policy
-param_scheduler = [
-    dict(
-        type='PolyLR',
-        eta_min=1e-4,
-        power=0.9,
-        begin=0,
-        end=5000,  # 총 에포크 수에 맞게 조정
-        by_epoch=False)
-]
