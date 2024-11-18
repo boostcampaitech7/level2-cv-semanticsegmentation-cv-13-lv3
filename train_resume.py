@@ -15,6 +15,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from lightning.pytorch.utilities import rank_zero_info
 from utils.Gsheet import Gsheet_param
+from test import test_model  # 테스트 함수 임포트
 
 def train_model(args):
     args_dict = OmegaConf.to_container(args, resolve=True)
@@ -113,6 +114,12 @@ def train_model(args):
                 val_dataloaders=valid_loader,
                 ckpt_path=checkpoint_path if args.resume else None  # 체크포인트 경로 전달
                 )
+    
+    # 학습 종료 후 테스트 수행
+    if args.auto_eval:
+        print("Train 완료 -> Test 시작!")
+        test_model(args)  # 테스트 함수 호출
+
 
 
 if __name__ == '__main__':
