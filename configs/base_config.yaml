@@ -18,7 +18,9 @@ lr: 1e-4
 
 input_size: 512
 max_epoch: 5
-valid_interval: 1
+valid_interval: 5
 
 amp: True
 
+resume: False # true면 체크포인트에서 학습 재개, false면 새로 시작
+wandb_id: None # resume: True일 때만 WandB ID 설정, 겹치는 run_name 없으면 안 줘도 됨
