@@ -1,6 +1,6 @@
 _base_ = [
     '../configs/_base_/models/segformer_mit-b0.py',
-    './schedule_20k_plateu.py',
+    './schedule_20k.py',
     './dataset.py',
     './runtime.py'
 ]

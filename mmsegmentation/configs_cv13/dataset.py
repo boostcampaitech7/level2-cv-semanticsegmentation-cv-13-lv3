@@ -1,4 +1,4 @@
-ddataset_type = 'XRayDataset'
+dataset_type = 'XRayDataset'
 
 train_pipeline = [
             dict(type='LoadImageFromFile'),
