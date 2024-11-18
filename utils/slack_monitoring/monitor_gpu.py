@@ -68,18 +68,13 @@ def monitor_gpu():
 
         # 사용량이 0MB로 감소한 경우 처리
         if used == 0 and previous_used != 0:
-            # 변동 메시지
-            change_message = (
+            combined_message = (
                 f"🔹 GPU 사용량: {used}MB / {total}MB\n"
-                f"이전 사용량: {previous_used}MB → 현재 사용량: {used}MB"
+                f"이전 사용량: {previous_used}MB → 현재 사용량: {used}MB\n"
+                f"✅ GPU 메모리 0MB - {SERVER_NAME} 사용 가능!"
             )
-            send_to_slack(change_message)
-            save_to_file(change_message)
-
-            # 학습 완료 메시지
-            complete_message = f"✅ GPU 메모리 0MB - {SERVER_NAME} 사용 가능!"
-            send_to_slack(complete_message)
-            save_to_file(complete_message)
+            send_to_slack(combined_message)
+            save_to_file(combined_message)
             alert_sent_for_idle = True
             previous_used = used  # 상태 갱신
             time.sleep(CHECK_INTERVAL)
