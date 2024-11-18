@@ -1,19 +1,19 @@
 checkpoint_dir: ./checkpoints
-checkpoint_file: U_Net_pp.pt
+checkpoint_file: U-Net++-v8.ckpt
 project_name: U-Net++
 
 #----------------------------------#
-run_name: resnet34(default)
+run_name: resnet152_300epoch
 
 seed: 42
 
-batch_size: 20
+batch_size: 8
 num_workers: 8
 
 lr: 1e-4
 
-input_size: 512
-max_epoch: 50
-valid_interval: 1
+input_size: 2048
+max_epoch: 100
+valid_interval: 5
 
 amp: True
