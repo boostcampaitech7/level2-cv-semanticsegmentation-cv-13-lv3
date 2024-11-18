@@ -9,6 +9,7 @@ import albumentations as A
 import os
 import torch
 from model_lightning import SegmentationModel
+from model import load_model
 from omegaconf import OmegaConf
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
@@ -23,7 +24,6 @@ def train_model(args):
     project_name = args_dict.pop('project_name', None)
     seed_everything(args.seed)
     set_seed(args.seed)
-    # wandb.init(project=args.project_name, name=args.run_name, config=args_dict)
 
     wandb_logger = WandbLogger(project=project_name, name=run_name, config=args_dict)
 
@@ -33,10 +33,10 @@ def train_model(args):
     checkpoint_callback = ModelCheckpoint(
         dirpath=args.checkpoint_dir,
         filename=args.checkpoint_file,
-        monitor='val/loss',  
-        mode='min',
+        monitor='val/dice',  # 성능 기준
+        mode='max',
         save_top_k=3,
-        save_weights_only=True  
+        save_weights_only=True
     )
 
     image_root = os.path.join(TRAIN_DATA_DIR, 'DCM')
@@ -44,7 +44,6 @@ def train_model(args):
 
     pngs = get_sorted_files_by_type(image_root, 'png')
     jsons = get_sorted_files_by_type(label_root, 'json')
-
     train_files, valid_files = split_data(pngs, jsons)
 
     train_dataset = XRayDataset(image_files=train_files['filenames'], label_files=train_files['labelnames'], transforms=A.Resize(args.input_size, args.input_size))
@@ -79,7 +78,13 @@ def train_model(args):
     )
 
     # 모델 초기화
-    seg_model = SegmentationModel(criterion=criterion, learning_rate=args.lr)
+    segmentation_model = load_model() 
+    criterion = nn.BCEWithLogitsLoss()
+    seg_model = SegmentationModel(
+        model=segmentation_model,
+        criterion=criterion,
+        learning_rate=args.lr
+    )
 
     # Trainer 설정
     trainer = Trainer(

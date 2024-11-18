@@ -40,12 +40,8 @@ def split_data(pngs, jsons, K=5, valid_idx=5):
 
 class XRayDataset(Dataset):
     def __init__(self, image_files, label_files=None, transforms=None):
-        """
-        image_files : list of image file paths
-        label_files : list of label file paths (None for test sets)
-        """
         self.image_files = image_files
-        self.label_files = label_files  # Optional for test set without labels
+        self.label_files = label_files
         self.transforms = transforms
     
     def __len__(self):
@@ -53,8 +49,6 @@ class XRayDataset(Dataset):
     
     def __getitem__(self, item):
         image_path = self.image_files[item]
-        image_name = os.path.basename(image_path)
-
         image = cv2.imread(image_path)
         image = image / 255.0
         
@@ -75,7 +69,6 @@ class XRayDataset(Dataset):
                 cv2.fillPoly(class_label, [points], 1)
                 label[..., class_ind] = class_label
         else:
-            # No labels for test set
             label = np.zeros((len(CLASSES), *image.shape[:2]), dtype=np.uint8)
         
         if self.transforms:
@@ -92,4 +85,4 @@ class XRayDataset(Dataset):
         image = torch.from_numpy(image.transpose(2, 0, 1)).float()
         label = torch.from_numpy(resized_label).float() if self.label_files else None
 
-        return (image_name, image, label) if label is not None else (image_name, image)
+        return (image, label) if label is not None else (image,)

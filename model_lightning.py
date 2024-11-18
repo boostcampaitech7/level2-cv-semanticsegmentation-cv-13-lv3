@@ -1,9 +1,11 @@
 from constants import CLASSES, IND2CLASS
 
 import torch
+import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 from lightning import LightningModule
+from torchmetrics.classification import BinaryJaccardIndex
 from utils import dice_coef, encode_mask_to_rle
 
 import os
@@ -12,54 +14,88 @@ import pandas as pd
 from model import load_model
 
 class SegmentationModel(LightningModule):
-    def __init__(self, criterion, learning_rate):
+    def __init__(self, model, criterion, learning_rate=1e-4):
         super().__init__()
-        self.model = load_model()  
+        self.model = model
         self.criterion = criterion
         self.lr = learning_rate
+        self.validation_dices = []
+        self.best_dice = 0.0  # 최고 Dice 점수 초기화
 
     def forward(self, x):
-        outputs = self.model(x)
-        return outputs.logits  # Segformer는 logits 속성에 예측 결과를 저장
+        return self.model(x)
 
     def training_step(self, batch, batch_idx):
-        _, images, labels = batch
-        logits = self(images)
-        loss = self.criterion(logits, labels)
-        self.log("train/loss", loss)
+        images, masks = batch
+        outputs = self(images)
+        logits = outputs.logits  # logits 추출
+        loss = self.criterion(logits, masks)
+        self.log("train_loss", loss, prog_bar=True)
         return loss
 
     def validation_step(self, batch, batch_idx):
-        _, images, labels = batch
-        logits = self(images)
-        print(f"Logits size: {logits.size()}")
-        print(f"Labels size: {labels.size()}")
-        loss = self.criterion(logits, labels)
-        self.log("val/loss", loss, prog_bar=True)
-        return loss
-
-    def configure_optimizers(self):
-        optimizer = torch.optim.Adam(params=self.model.parameters(), lr=self.lr, weight_decay=1e-6)
-        return optimizer
+        images, masks = batch
+        outputs = self(images)
+        logits = outputs.logits  # logits 추출
+        loss = self.criterion(logits, masks)
+        
+        # Dice coefficient 계산
+        dice = self._dice_coefficient(logits, masks)
+        self.validation_dices.append(dice.unsqueeze(0))  # 1차원 텐서로 추가
+        
+        self.log("val_loss", loss, prog_bar=True)
+        self.log("val_dice_batch", dice, prog_bar=True)
+        return {"val_loss": loss, "dice": dice}
 
     def on_validation_epoch_end(self):
-        dices = torch.cat(self.validation_dices, 0)
-        dices_per_class = torch.mean(dices, 0)
-        avg_dice = torch.mean(dices_per_class).item()
+        if len(self.validation_dices) > 0:
+            dices = torch.cat(self.validation_dices, dim=0)
+            avg_dice = dices.mean()
+            self.log("val_dice", avg_dice, prog_bar=True)
+            
+            # 최고 Dice 점수 갱신
+            if avg_dice > self.best_dice:
+                self.best_dice = avg_dice.item()
+                self.log("best_dice", self.best_dice, prog_bar=True)
+        else:
+            self.log("val_dice", torch.tensor(0.0), prog_bar=True)
         
-        # 로그와 체크포인트 저장을 위한 모니터링 지표로 사용
-        self.log('val/dice', avg_dice, prog_bar=True)
-        
-        if avg_dice > self.best_dice:
-            self.best_dice = avg_dice
-            print(f"Best performance improved: {self.best_dice:.4f}")
+        self.validation_dices = []
 
-        # Log Dice scores per class using WandB logger
-        dice_scores_dict = {'val/' + c: d.item() for c, d in zip(CLASSES, dices_per_class)}
-        self.log_dict(dice_scores_dict, on_epoch=True, logger=True)  # Log to WandB at the end of each epoch
+    def configure_optimizers(self):
+        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+        return optimizer
 
-        # 에폭이 끝나면 validation_dices 초기화
-        self.validation_dices.clear()
+    @staticmethod
+    def _dice_coefficient(outputs, targets, smooth=1e-5):
+        outputs = torch.sigmoid(outputs)  # 예측값을 확률로 변환
+        outputs = (outputs > 0.5).float()  # 이진화
+        intersection = (outputs * targets).sum()
+        union = outputs.sum() + targets.sum()
+        dice = (2.0 * intersection + smooth) / (union + smooth)
+        return dice
+
+    def on_validation_epoch_end(self):
+        if len(self.validation_dices) > 0:
+            dices = torch.cat(self.validation_dices, dim=0)
+            avg_dice = dices.mean()
+
+            # 클래스별 Dice 계산
+            dices_per_class = dices.mean(dim=0)  # 각 클래스에 대한 평균 계산
+
+            # 로그 출력 및 best_dice 업데이트
+            self.log("val_dice", avg_dice, prog_bar=True)
+            if avg_dice > self.best_dice:
+                self.best_dice = avg_dice.item()
+                self.log("best_dice", self.best_dice, prog_bar=True)
+
+            # 클래스별 Dice 점수를 사전으로 저장
+            dice_scores_dict = {f'val/{c}': d.item() for c, d in zip(CLASSES, dices_per_class)}
+            self.log_dict(dice_scores_dict, prog_bar=False)
+        else:
+            self.log("val_dice", torch.tensor(0.0), prog_bar=True)
+
+        self.validation_dices = []
 
     def test_step(self, batch, batch_idx):
         image_names, images = batch
