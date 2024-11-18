@@ -1,4 +1,13 @@
+import os
+import shutil
 import json
+
+# 반복문 사용: toSegFormat이 좀 복잡해지므로 일단 보류 - 불편해지면 돌아오겠읍니다.
+
+name = 'image1664935962797'
+image_root = '../train/DCM'
+json_root = '../train/outputs_json/'
+
 
 # segFormat to datu
 def segFormat_to_datu_with_metadata(data_json):
@@ -43,11 +52,29 @@ def segFormat_to_datu_with_metadata(data_json):
     
     return datu_json
 
+IDs = os.listdir(image_root)
+id = None
+for i in IDs:
+    path = os.listdir(os.path.join(image_root, i))
+    if name+'.png' in path:
+        # print(path)
+        # print(i)
+        id = i
+        break
+
+os.makedirs(os.path.join('CVAT', id, 'png'), exist_ok=True)
+os.makedirs(os.path.join('CVAT', id, 'annotations'), exist_ok=True)
+shutil.copyfile(os.path.join(image_root, id, name+'.png'), os.path.join('CVAT', id, 'png', name+'.png'))
+shutil.copyfile(os.path.join(json_root, id, name+'.json'), os.path.join('CVAT', id, 'annotations', name+'.json'))
+
+annot_path = os.path.join('CVAT', id, 'annotations', name+'.json')
+# annot_path
+
 # 변환 및 저장
-with open("utils/origin/image1661144825412.json", "r") as file:
+with open(annot_path, "r") as file:
     data_json = json.load(file)
 
 datu_json = segFormat_to_datu_with_metadata(data_json)
 
-with open("utils/trans/toDatu.json", "w") as file:
+with open(annot_path, "w") as file:
     json.dump(datu_json, file, indent=4)

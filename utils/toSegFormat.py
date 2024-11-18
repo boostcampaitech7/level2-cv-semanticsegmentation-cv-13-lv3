@@ -1,4 +1,10 @@
 import json
+import os
+
+origin_path = 'CVAT/ID363/annotations'              # json 이름 가져오기 위한 ~~
+processed_path = 'CVAT/ID363/hihi'                  # 웬만하면 default.json 혼자 있는 폴더를 만들어두는게 보기 편하입니더
+name_processed = os.path.join(processed_path, 'default.json')
+
 # datu to segFormat
 def datu_to_segFormat_with_metadata(datu_json):
     items = datu_json["items"][0]
@@ -30,10 +36,10 @@ def datu_to_segFormat_with_metadata(datu_json):
     return data_json
 
 # 변환 및 저장
-with open("default.json", "r") as file:
+with open(os.path.join(processed_path, "default.json"), "r") as file:
     datu_json = json.load(file)
 
 data_json = datu_to_segFormat_with_metadata(datu_json)
 
-with open("toSegFormat.json", "w") as file:
+with open(os.path.join(processed_path, os.listdir(os.path.join(origin_path))[0]), "w") as file:
     json.dump(data_json, file, indent=4)
