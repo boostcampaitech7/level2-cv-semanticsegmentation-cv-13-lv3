@@ -71,7 +71,7 @@ def monitor_gpu():
             combined_message = (
                 f"🔹 GPU 사용량: {used}MB / {total}MB\n"
                 f"이전 사용량: {previous_used}MB → 현재 사용량: {used}MB\n"
-                f"✅ GPU 메모리 0MB - <{SERVER_NAME}> 사용 가능!"
+                f"✅ <{SERVER_NAME}> 사용 가능!"
             )
             send_to_slack(combined_message)
             save_to_file(combined_message)
