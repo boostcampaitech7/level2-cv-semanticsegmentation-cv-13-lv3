@@ -66,9 +66,37 @@ def monitor_gpu():
             save_to_file(initial_message)
             first_run = False
 
-        # 사용량 변동 감지 및 임계치 조건 추가
+        # 사용량이 0MB로 감소한 경우 처리
+        if used == 0 and previous_used != 0:
+            # 변동 메시지
+            change_message = (
+                f"🔹 GPU 사용량: {used}MB / {total}MB\n"
+                f"이전 사용량: {previous_used}MB → 현재 사용량: {used}MB"
+            )
+            send_to_slack(change_message)
+            save_to_file(change_message)
+
+            # 학습 완료 메시지
+            complete_message = f"✅ GPU 메모리 0MB - {SERVER_NAME} 사용 가능!"
+            send_to_slack(complete_message)
+            save_to_file(complete_message)
+            alert_sent_for_idle = True
+            previous_used = used  # 상태 갱신
+            time.sleep(CHECK_INTERVAL)
+            continue
+
+        # GPU 사용량이 0에서 증가한 경우 학습 시작 알림
+        if used > 0 and previous_used == 0 and alert_sent_for_idle:
+            start_message = (
+                f"🔄 학습이 시작되었습니다!\n🔹 GPU 사용량: {used}MB / {total}MB"
+            )
+            send_to_slack(start_message)
+            save_to_file(start_message)
+            alert_sent_for_idle = False
+
+        # 사용량 변화 메시지 (임계치 기준)
         if previous_used is not None:
-            change = abs(used - previous_used)  # 사용량 변화 계산
+            change = abs(used - previous_used)
             if change >= ALERT_THRESHOLD:  # ALERT_THRESHOLD = 5000
                 change_message = (
                     f"🔹 GPU 사용량: {used}MB / {total}MB\n"
@@ -77,22 +105,7 @@ def monitor_gpu():
                 send_to_slack(change_message)
                 save_to_file(change_message)
 
-        # GPU 사용량이 0인 경우 학습 완료 알림
-        if used == 0 and not alert_sent_for_idle:
-            complete_message = f"✅ GPU 메모리 0MB - 학습 완료, 서버 사용 가능!"
-            send_to_slack(complete_message)
-            save_to_file(complete_message)
-            alert_sent_for_idle = True
-
-        # GPU 사용량이 0에서 증가한 경우 학습 시작 알림
-        if used > 0 and previous_used == 0 and not alert_sent_for_idle:
-            start_message = (
-                f"🔄 학습이 시작되었습니다!\n🔹 GPU 사용량: {used}MB / {total}MB"
-            )
-            send_to_slack(start_message)
-            save_to_file(start_message)
-            alert_sent_for_idle = False
-
+        # 상태 업데이트
         previous_used = used
         time.sleep(CHECK_INTERVAL)
 
