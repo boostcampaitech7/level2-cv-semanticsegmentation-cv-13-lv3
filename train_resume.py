@@ -30,10 +30,10 @@ def train_model(args):
         if os.path.exists(checkpoint_path):
             print(f"Resume : <{checkpoint_path}> 체크포인트에서 학습 재개")
         else:
-            raise FileNotFoundError(f"Resume : <{checkpoint_path}> 체크포인트가 존재하지 않음")
+            raise FileNotFoundError(f"Resume : 체크포인트가 존재하지 않음 <{checkpoint_path}>")
     else:
         checkpoint_path = None
-        print("새로운 학습 시작")
+        print("No Resume : 새로운 학습 시작")
 
     # WandB 설정
     wandb_logger = WandbLogger(
@@ -104,11 +104,15 @@ def train_model(args):
         accelerator='gpu',
         devices=1 if torch.cuda.is_available() else None,
         precision="16-mixed" if args.amp else 32,
-        resume_from_checkpoint=checkpoint_path  # 체크포인트에서 학습 재개
+        #resume_from_checkpoint=checkpoint_path  # 체크포인트에서 학습 재개
     )
 
     # 학습 시작
-    trainer.fit(seg_model, train_dataloaders=train_loader, val_dataloaders=valid_loader)
+    trainer.fit(seg_model, 
+                train_dataloaders=train_loader, 
+                val_dataloaders=valid_loader,
+                ckpt_path=checkpoint_path if args.resume else None  # 체크포인트 경로 전달
+                )
 
 
 if __name__ == '__main__':

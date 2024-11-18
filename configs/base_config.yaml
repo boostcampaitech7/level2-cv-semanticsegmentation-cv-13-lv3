@@ -1,26 +1,28 @@
-checkpoint_dir: ./checkpoints
-checkpoint_file: fcn_resnet50_best_model.pt
-project_name: project4_test_run
+checkpoint_dir: ./checkpoints/pspnet/resnet152/1e-4
+checkpoint_file: pspnet_resnet152_best_model
+project_name: PSPNet
 
 #----------------------------------#
-run_name: test yaml
+run_name: resnet152_16bs_100ep
 
-architecture: Unet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
-encoder_name: efficientnet-b0
+architecture: PSPNet               # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
+encoder_name: resnet152
 encoder_weight: imagenet
 
 seed: 42
 
-batch_size: 20
-num_workers: 8
+batch_size: 4
+num_workers: 4
 
 lr: 1e-4
 
-input_size: 512
-max_epoch: 5
+input_size: 2048
+max_epoch: 100
 valid_interval: 5
 
 amp: True
 
-resume: False # true면 체크포인트에서 학습 재개, false면 새로 시작
-wandb_id: None # resume: True일 때만 WandB ID 설정, 겹치는 run_name 없으면 안 줘도 됨
+resume: True # true면 체크포인트에서 학습 재개, false면 새로 시작
+wandb_id: None # resume: True일 때만 WandB ID 설정
+
+auto_eval: False
