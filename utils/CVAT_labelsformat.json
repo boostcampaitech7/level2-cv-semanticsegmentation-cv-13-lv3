@@ -1,0 +1,205 @@
+[
+  {
+    "name": "finger-1",
+    "id": 3791951,
+    "color": "#DC143C",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-2",
+    "id": 3791952,
+    "color": "#770B20",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-3",
+    "id": 3791953,
+    "color": "#00008E",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-4",
+    "id": 3791954,
+    "color": "#0000E6",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-5",
+    "id": 3791955,
+    "color": "#6A00E4",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-6",
+    "id": 3791956,
+    "color": "#003C64",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-7",
+    "id": 3791957,
+    "color": "#005064",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-8",
+    "id": 3791958,
+    "color": "#000046",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-9",
+    "id": 3791959,
+    "color": "#0000C0",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-10",
+    "id": 3791960,
+    "color": "#FAA61E",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-11",
+    "id": 3791961,
+    "color": "#64AA1E",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-12",
+    "id": 3791962,
+    "color": "#DCDC00",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-13",
+    "id": 3791963,
+    "color": "#AF74AF",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-14",
+    "id": 3791964,
+    "color": "#FA001E",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-15",
+    "id": 3791965,
+    "color": "#A52A2A",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-16",
+    "id": 3791966,
+    "color": "#FF4DFF",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-17",
+    "id": 3791967,
+    "color": "#00E2FC",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-18",
+    "id": 3791968,
+    "color": "#B6B6FF",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "finger-19",
+    "id": 3791969,
+    "color": "#005200",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "Trapezium",
+    "id": 3791970,
+    "color": "#78A69D",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "Trapezoid",
+    "id": 3791971,
+    "color": "#6E4C00",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "Capitate",
+    "id": 3791972,
+    "color": "#AE39FF",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "Hamate",
+    "id": 3791973,
+    "color": "#C76400",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "Scaphoid",
+    "id": 3791978,
+    "color": "#480076",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "Lunate",
+    "id": 3791979,
+    "color": "#FFB3F0",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "Triquetrum",
+    "id": 3791980,
+    "color": "#007D5C",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "Pisiform",
+    "id": 3791981,
+    "color": "#D10097",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "Radius",
+    "id": 3791982,
+    "color": "#BCD0B6",
+    "type": "polygon",
+    "attributes": []
+  },
+  {
+    "name": "Ulna",
+    "id": 3791983,
+    "color": "#00DCA0",
+    "type": "polygon",
+    "attributes": []
+  }
+]
