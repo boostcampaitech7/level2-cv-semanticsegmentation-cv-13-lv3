@@ -1,0 +1,17 @@
+LOCAL_RANK: 0 - CUDA_VISIBLE_DEVICES: [0]
+
+  | Name      | Type              | Params | Mode
+--------------------------------------------------------
+0 | model     | Unet              | 32.5 M | train
+1 | criterion | BCEWithLogitsLoss | 0      | train
+--------------------------------------------------------
+32.5 M    Trainable params
+0         Non-trainable params
+32.5 M    Total params
+130.101   Total estimated model params size (MB)
+224       Modules in train mode
+0         Modules in eval mode
+Sanity Checking DataLoader 0: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:02<00:00,  0.98it/s]Best performance improved: 0.0105
+Epoch 0:   0%|                                                                                                                                                                                | 0/32 [00:00<?, ?it/s]
+
+Detected KeyboardInterrupt, attempting graceful shutdown ...
