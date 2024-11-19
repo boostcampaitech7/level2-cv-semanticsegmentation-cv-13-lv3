@@ -1,7 +1,7 @@
 max_iters = 20000
 
 # training schedule for 50 epochs
-train_cfg = dict(type='IterBasedTrainLoop', max_iters=max_iters)
+train_cfg = dict(type='IterBasedTrainLoop', max_iters=max_iters, val_interval=1000)
 # learning policy
 param_scheduler = [
     dict(

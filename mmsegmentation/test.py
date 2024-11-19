@@ -2,6 +2,7 @@ import sys
 
 sys.path.append('../lightningmodule')
 
+from omegaconf import OmegaConf
 from utils.utils import get_sorted_files_by_type, encode_mask_to_rle
 from constants import IND2CLASS
 
@@ -19,6 +20,8 @@ from tools.test import parse_args, trigger_visualization_hook
 import numpy as np
 import pandas as pd
 
+from argparse import Namespace
+
 def set_xraydataset(config):
 
     TEST_DATA_DIR = 'data/test'
@@ -29,6 +32,18 @@ def set_xraydataset(config):
     config.test_dataloader.dataset.image_files = np.array(pngs)
     config.test_dataloader.dataset.label_files = None
 
+    return config
+
+def set_yaml_config_test(config, yaml_config):
+
+    if yaml_config.tta is True:
+        config.test_dataloader.dataset.pipeline = config.tta_pipeline
+        config.tta_model.module = config.model
+        config.model = config.tta_model
+
+    ckpt_filepath = os.path.join(yaml_config.checkpoint_dir, osp.basename(yaml_config.checkpoint_file)[0] + 'pth')
+    config.load_from = ckpt_filepath
+    
     return config
 
 def inference(args, rles, filename_and_class, thr=0.5):
@@ -48,17 +63,14 @@ def inference(args, rles, filename_and_class, thr=0.5):
     df.to_csv("output.csv", index=False)
 
 
-def main():
-    args = parse_args()
-
+def test(args, yaml_cfg):
     # load config
     cfg = Config.fromfile(args.config)
   
     cfg = set_xraydataset(cfg)
+    cfg = set_yaml_config_test(cfg, yaml_cfg)
 
     cfg.launcher = args.launcher
-    if args.cfg_options is not None:
-        cfg.merge_from_dict(args.cfg_options)
 
     # work_dir is determined in this priority: CLI > segment in file > filename
     if args.work_dir is not None:
@@ -69,15 +81,8 @@ def main():
         cfg.work_dir = osp.join('./work_dirs',
                                 osp.splitext(osp.basename(args.config))[0])
 
-    cfg.load_from = args.checkpoint
-
     if args.show or args.show_dir:
         cfg = trigger_visualization_hook(cfg, args)
-
-    if args.tta:
-        cfg.test_dataloader.dataset.pipeline = cfg.tta_pipeline
-        cfg.tta_model.module = cfg.model
-        cfg.model = cfg.tta_model
 
     # add output_dir in metric
     cfg.test_evaluator['keep_results'] = True
@@ -93,4 +98,8 @@ def main():
     inference(args, rles, filename_and_class)
 
 if __name__ == '__main__':
-    main()
+    args = parse_args()
+    yaml_config_path = '../lightningmodule/configs/base_config.yaml'
+    with open(yaml_config_path, 'r') as f:
+        cfg = OmegaConf.load(f)  
+    test(args, cfg)

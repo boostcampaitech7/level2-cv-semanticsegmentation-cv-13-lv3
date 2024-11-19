@@ -3,13 +3,16 @@ default_scope = 'mmseg'
 load_from = None
 resume = True
 
-work_dir = './work_dirs/segformer_experiment'
+#work_dir = './work_dirs/segformer_experiment'
 
 vis_backends = [dict(type='LocalVisBackend'),
                 dict(type='WandbVisBackend',
                      init_kwargs=dict(
                          project='test',
                          name='test',
+                         id=None,
+                         resume='allow',
+                         allow_val_change=True,
                          config={}
                      ))
                 ]
@@ -31,6 +34,6 @@ default_hooks = dict(
     timer=dict(type='IterTimerHook'),
     logger=dict(type='LoggerHook', interval=25, log_metric_by_epoch=False),  # 에포크 기반으로 변경
     param_scheduler=dict(type='ParamSchedulerHook'),
-    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=1000),  # 5 에포크마다 체크포인트 저장
+    checkpoint=dict(type='CheckpointHook', by_epoch=False, interval=1000, out_dir=None, filename_tmpl=None),  # 5 에포크마다 체크포인트 저장
     sampler_seed=dict(type='DistSamplerSeedHook'),
     visualization=dict(type='SegVisualizationHook'))
