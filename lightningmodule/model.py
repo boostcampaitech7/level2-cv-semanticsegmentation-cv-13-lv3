@@ -1,4 +1,4 @@
-from constants import CLASSES
+from utils.constants import CLASSES
 
 import segmentation_models_pytorch as smp
 

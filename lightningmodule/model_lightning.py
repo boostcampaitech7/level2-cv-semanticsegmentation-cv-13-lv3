@@ -1,4 +1,4 @@
-from constants import CLASSES, IND2CLASS
+from utils.constants import CLASSES, IND2CLASS
 
 import torch
 import torch.optim as optim

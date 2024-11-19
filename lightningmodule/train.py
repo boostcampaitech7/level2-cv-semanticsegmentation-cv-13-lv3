@@ -3,7 +3,7 @@ import torch.nn as nn
 from torch.utils.data import DataLoader
 from xraydataset import XRayDataset, split_data
 from utils.utils import get_sorted_files_by_type, set_seed
-from constants import TRAIN_DATA_DIR
+from utils.constants import TRAIN_DATA_DIR
 from argparse import ArgumentParser, Namespace
 import albumentations as A
 import os
