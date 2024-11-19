@@ -23,6 +23,7 @@ def train_model(args):
     run_name = args_dict.pop('run_name', None)
     project_name = args_dict.pop('project_name', None)
     seed_everything(args.seed)
+    set_seed(args.seed)
 
     # 체크포인트 경로 설정
     checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}.ckpt")
