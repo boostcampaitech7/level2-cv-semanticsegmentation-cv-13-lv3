@@ -8,7 +8,7 @@ import json
 from sklearn.model_selection import GroupKFold
 from torch.utils.data import Dataset
 
-from constants import CLASSES, CLASS2IND
+from utils.constants import CLASSES, CLASS2IND
 
 import albumentations as A
 
