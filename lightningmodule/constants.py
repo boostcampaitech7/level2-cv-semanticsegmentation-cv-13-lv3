@@ -11,8 +11,8 @@ CLASS2IND = {v: i for i, v in enumerate(CLASSES)}
 
 IND2CLASS = {v: k for k, v in CLASS2IND.items()}
 
-TRAIN_DATA_DIR = '../../../data/train'
-TEST_DATA_DIR = '../../../data/test'
+TRAIN_DATA_DIR = '../../data/train'
+TEST_DATA_DIR = '../../data/test'
 
 # Color palette for visualization
 PALETTE = [
