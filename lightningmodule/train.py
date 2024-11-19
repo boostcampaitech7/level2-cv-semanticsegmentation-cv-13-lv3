@@ -14,6 +14,7 @@ from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from utils.Gsheet import Gsheet_param
+from augmentation import load_augmentation
 
 # 모델 학습과 검증을 수행하는 함수
 def train_model(args):
@@ -24,7 +25,7 @@ def train_model(args):
     set_seed(args.seed)
     # wandb.init(project=args.project_name, name=args.run_name, config=args_dict)
 
-    wandb_logger = WandbLogger(project=project_name, name=run_name, config=args_dict)
+    # wandb_logger = WandbLogger(project=project_name, name=run_name, config=args_dict)
 
     # model = models.segmentation.fcn_resnet50(pretrained=True)
     # # output class 개수를 dataset에 맞도록 수정합니다.
@@ -38,8 +39,9 @@ def train_model(args):
 
     train_files, valid_files = split_data(pngs, jsons)
 
-    train_dataset = XRayDataset(image_files=train_files['filenames'], label_files=train_files['labelnames'], transforms=A.Resize(args.input_size, args.input_size))
-    valid_dataset = XRayDataset(image_files=valid_files['filenames'], label_files=valid_files['labelnames'], transforms=A.Resize(args.input_size, args.input_size))
+    transforms = load_augmentation(args)
+    train_dataset = XRayDataset(image_files=train_files['filenames'], label_files=train_files['labelnames'], transforms=transforms)
+    valid_dataset = XRayDataset(image_files=valid_files['filenames'], label_files=valid_files['labelnames'], transforms=transforms)
 
     train_loader = DataLoader(
         dataset=train_dataset, 
@@ -74,7 +76,7 @@ def train_model(args):
 
     # Trainer 설정
     trainer = Trainer(
-        logger=wandb_logger,
+        # logger=wandb_logger,
         log_every_n_steps=5,
         max_epochs=args.max_epoch,
         check_val_every_n_epoch=args.valid_interval,
