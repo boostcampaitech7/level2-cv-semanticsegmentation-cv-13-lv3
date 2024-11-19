@@ -22,6 +22,9 @@ from PIL import Image, ImageDraw
 import cv2
 
 import wandb
+from augmentation import load_transforms
+from omegaconf import OmegaConf
+from argparse import ArgumentParser
 
 def ready_for_visualize(image, label):
     lbl = label.numpy().astype(np.uint8)
@@ -104,28 +107,29 @@ def visual_dataset_wandb(visual_loader):
     wandb.log({"random_field": table})
     return
 
-def visual_dataset(visual_loader):
+def visual_dataset(visual_loader, img_num=800):
     save_dir = 'visualize/'
 
     if os.path.exists(save_dir):  
         shutil.rmtree(save_dir)
 
-    os.makedirs(save_dir, exist_ok=True)    
+    os.makedirs(save_dir, exist_ok=True)  
 
-    for image_names, images, labels in visual_loader:
+    for idx, (image_names, images, labels) in enumerate(visual_loader):
+        if idx >= img_num:
+            break
         for image_name, image, label in zip(image_names, images, labels):
             img, lbl = ready_for_visualize(image, label)
-
             img = draw_outline(img, lbl)
-
+            
             img.save(os.path.join(save_dir, image_name))
 
 def parse_args():
 
     parser = ArgumentParser()
 
-    parser.add_argument("--input_size", type=int, default=512)
     parser.add_argument("--wandb", action="store_true", help="upload image into wandb")
+    parser.add_argument("--config", type=str, default="configs/base_config.yaml")
 
     args = parser.parse_args()
 
@@ -133,24 +137,27 @@ def parse_args():
 
 if __name__ == '__main__':
     args = parse_args()
-
+    with open(args.config, 'r') as f:
+        cfg = OmegaConf.load(f)
+        
     image_root = os.path.join(TRAIN_DATA_DIR, 'DCM')
     label_root = os.path.join(TRAIN_DATA_DIR, 'outputs_json')
 
     pngs = get_sorted_files_by_type(image_root, 'png')
     jsons = get_sorted_files_by_type(label_root, 'json')
-
-    visualize_dataset = XRayDataset(image_files=np.array(pngs), label_files=jsons, transforms=A.Resize(args.input_size, args.input_size))
-
+    
+    transforms = load_transforms(cfg)
+    visualize_dataset = XRayDataset(image_files=np.array(pngs), label_files=jsons, transforms=transforms)
+    
     visual_loader = DataLoader(
         dataset=visualize_dataset, 
-        batch_size=8,
+        batch_size=8 if args.wandb else 1,
         shuffle=False,
         num_workers=1,
         drop_last=False,
     )
-
+    
     if args.wandb:
         visual_dataset_wandb(visual_loader)
     else:
-        visual_dataset(visual_loader)
+        visual_dataset(visual_loader, img_num=2)

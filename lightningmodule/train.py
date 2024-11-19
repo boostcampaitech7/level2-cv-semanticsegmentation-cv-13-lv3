@@ -14,7 +14,7 @@ from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from utils.Gsheet import Gsheet_param
-from augmentation import load_augmentation
+from augmentation import load_transforms
 
 # 모델 학습과 검증을 수행하는 함수
 def train_model(args):
@@ -39,7 +39,7 @@ def train_model(args):
 
     train_files, valid_files = split_data(pngs, jsons)
 
-    transforms = load_augmentation(args)
+    transforms = load_transforms(args)
     train_dataset = XRayDataset(image_files=train_files['filenames'], label_files=train_files['labelnames'], transforms=transforms)
     valid_dataset = XRayDataset(image_files=valid_files['filenames'], label_files=valid_files['labelnames'], transforms=transforms)
 
