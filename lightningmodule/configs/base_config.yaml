@@ -11,13 +11,13 @@ encoder_weight: imagenet
 
 seed: 42
 
-batch_size: 20
+batch_size: 1
 num_workers: 8
 
 lr: 1e-4
 
 input_size: 512
-max_epoch: 5
-valid_interval: 5
+max_epoch: 10
+valid_interval: 1
 
 amp: True

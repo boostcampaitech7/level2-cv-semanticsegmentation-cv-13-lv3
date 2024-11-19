@@ -5,6 +5,10 @@ import random
 
 import os
 
+import seaborn as sns
+import matplotlib.pyplot as plt
+import numpy as np
+
 # 시각화를 위한 팔레트를 설정합니다.
 PALETTE = [
     (220, 20, 60), (119, 11, 32), (0, 0, 142), (0, 0, 230), (106, 0, 228),
@@ -82,14 +86,74 @@ def decode_rle_to_mask(rle, height, width):
     
     return img.reshape(height, width)
 
-def print_confusion_matrix(class_name, confusion_matrix):
-    tn, fp, fn, tp = confusion_matrix.flatten()
-    accuracy = (tp + tn) / (tp + tn + fp + fn)
-    precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-    recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+def calculate_confusion_matrix(y_true, y_pred, num_classes, threshold):
+    """
+    y_true: ground truth labels (B, C, H, W)
+    y_pred: predicted labels (B, C, H, W)
+    num_classes: number of classes (C)
+    returns: confusion matrix of shape (num_classes, num_classes) with ratio values
+    """
+    confusion_matrix = torch.zeros(num_classes, num_classes, device=y_true.device)
     
-    print(f"{class_name} Metrics:")
-    print(f"Accuracy: {accuracy:.4f}")
-    print(f"Precision: {precision:.4f}")
-    print(f"Recall: {recall:.4f}")
-    print()
+    # 각 클래스별 전체 픽셀 수 계산
+    total_pixels_per_class = y_true.shape[1] * y_true.shape[2]
+    y_pred = (y_pred > threshold)
+
+    # 각 클래스의 Calculate confusion matrix
+    for i in range(num_classes):
+        for j in range(num_classes):
+            true_i = y_true[i].flatten()
+            pred_j = y_pred[j].flatten()
+            # intersection 계산 후 비율로 변환
+            intersection = torch.sum(true_i * pred_j)
+            # i번째 클래스의 전체 픽셀 수로 나누어 비율 계산
+            ratio = intersection / (total_pixels_per_class + 1e-6)  # 0 나눗셈 방지
+            confusion_matrix[i, j] = ratio.item()
+    
+    return confusion_matrix
+
+def calculate_metrics(confusion_matrix):
+    """
+    Calculate metrics from confusion matrix.
+    """
+    # 각 클래스에 대한 TP, FP, FN 계산
+    TP = confusion_matrix.diag()
+    FP = confusion_matrix.sum(dim=0) - TP
+    FN = confusion_matrix.sum(dim=1) - TP
+
+    # Precision, Recall, F1 Score 계산
+    precision = TP / (TP + FP + 1e-6)  # 0 나눗셈 방지
+    recall = TP / (TP + FN + 1e-6)
+    f1_score = 2 * (precision * recall) / (precision + recall + 1e-6)
+
+    return precision, recall, f1_score
+
+def save_confusion_matrix(confusion_matrix, classes):
+
+    # Create figure and axes
+    plt.figure(figsize=(15, 12))
+    
+    # Create heatmap using the averaged confusion matrix
+    sns.heatmap(confusion_matrix.cpu().numpy(), 
+                annot=True,
+                fmt='.3f',  # 소수점 3자리까지 표시
+                cmap='Blues',
+                xticklabels=classes,
+                yticklabels=classes)
+    
+    plt.title('Confusion Matrix')
+    plt.xlabel('Predicted')
+    plt.ylabel('True')
+    
+    # Rotate x-axis labels for better readability
+    plt.xticks(rotation=45, ha='right')
+    plt.yticks(rotation=0)
+    
+    # Adjust layout to prevent label cutoff
+    plt.tight_layout()
+    
+    # Save the plot
+    plt.savefig('confusion_matrix.png')
+    plt.close()
+    
+    print("\nConfusion matrix has been saved as 'confusion_matrix.png'")

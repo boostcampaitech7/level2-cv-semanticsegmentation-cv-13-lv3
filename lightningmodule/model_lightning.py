@@ -4,8 +4,7 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 from lightning import LightningModule
-from utils.utils import dice_coef, encode_mask_to_rle, print_confusion_matrix
-from torchmetrics import ConfusionMatrix
+from utils.utils import dice_coef, encode_mask_to_rle, calculate_confusion_matrix, save_confusion_matrix
 
 import os
 import pandas as pd
@@ -21,24 +20,39 @@ class SegmentationModel(LightningModule):
         self.thr = thr
         self.best_dice = 0.0
         self.validation_dices = []  # validation_step 출력을 저장할 리스트
-        self.confusion_matrics = { # 클래스별로 Confusion Matrix 초기화
-            class_name: ConfusionMatrix(num_classes=29, task="multiclass") for class_name in CLASSES
-        }
         
         self.rles = []
         self.filename_and_class = []
+        self.confusion_matrix = []
 
         self.save_hyperparameters()
 
     def forward(self, x):
         return self.model(x)
 
+    def on_train_epoch_start(self):
+        # 새로운 에폭이 시작될 때 초기화
+        self.confusion_matrix = torch.zeros(len(CLASSES), len(CLASSES), device=self.device)
+
     def training_step(self, batch, batch_idx):
         _, images, masks = batch
         outputs = self(images)
+        
+        batch_size = len(outputs)
+        for i in range(batch_size):
+            batch_conf_matrix = calculate_confusion_matrix(masks[i], outputs[i], num_classes=len(CLASSES), threshold=self.thr)
+            self.confusion_matrix += batch_conf_matrix
+            
+        # 전체 배치 수로 나누어 평균 계산
+        self.confusion_matrix = self.confusion_matrix / batch_size
+        
+        # 손실 계산
         loss = self.criterion(outputs, masks)
         self.log('train/loss', loss, on_step=True, on_epoch=False)
         return loss
+    
+    def on_fit_end(self):
+        save_confusion_matrix(self.confusion_matrix, CLASSES)
 
     def validation_step(self, batch, batch_idx):
         _, images, masks = batch
@@ -55,14 +69,6 @@ class SegmentationModel(LightningModule):
         outputs = (outputs > self.thr)
         masks = masks
         
-        # 각 클래스별로 Confusion Matrix 업데이트
-        for idx, class_name in enumerate(CLASSES):
-            self.confusion_matrics[class_name].to(outputs.device)
-            self.confusion_matrics[class_name].update(
-                outputs[:, idx].flatten(),
-                masks[:, idx].flatten()
-            )
-        
         dice = dice_coef(outputs, masks).detach().cpu()
         self.validation_dices.append(dice)  # dice score 저장
         return dice
@@ -71,15 +77,6 @@ class SegmentationModel(LightningModule):
         dices = torch.cat(self.validation_dices, 0)
         dices_per_class = torch.mean(dices, 0)
         avg_dice = torch.mean(dices_per_class).item()
-        
-        # 각 클래스별로 Confusion Matrix 계산 및 시각화
-        confusion_matrices = {
-            class_name: cm.compute() for class_name, cm in self.confusion_matrics.items()
-        }
-        
-        print("\nValidation Confusion Matrices:")
-        for class_name, cm in confusion_matrices.items():
-            print_confusion_matrix(class_name, cm)
         
         # 로그와 체크포인트 저장을 위한 모니터링 지표로 사용
         self.log('val/dice', avg_dice, prog_bar=True)
@@ -92,10 +89,6 @@ class SegmentationModel(LightningModule):
         dice_scores_dict = {'val/' + c: d.item() for c, d in zip(CLASSES, dices_per_class)}
         self.log_dict(dice_scores_dict, on_epoch=True, logger=True)  # Log to WandB at the end of each epoch
 
-        # Confusion Matrics 초기화
-        for cm in self.confusion_matrics.values():
-            cm.reset()
-            
         # 에폭이 끝나면 validation_dices 초기화
         self.validation_dices.clear()
 
