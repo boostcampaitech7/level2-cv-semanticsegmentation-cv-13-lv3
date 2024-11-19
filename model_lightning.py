@@ -81,14 +81,16 @@ class SegmentationModel(LightningModule):
         image_names, images = batch
         outputs = self(images)
 
+        logits = outputs.logits
+
         # 크기 보정
-        outputs = F.interpolate(outputs, size=(2048, 2048), mode="bilinear")
-        outputs = torch.sigmoid(outputs)
-        outputs = (outputs > self.thr).detach().cpu().numpy()
+        resized_outputs = F.interpolate(logits, size=(2048, 2048), mode="bilinear", align_corners=False)
+        resized_outputs = torch.sigmoid(resized_outputs)
+        binary_masks = (resized_outputs > self.thr).detach().cpu().numpy()
 
         # RLE 인코딩 및 파일명 생성
-        for output, image_name in zip(outputs, image_names):
-            for c, segm in enumerate(output):
+        for binary_mask, image_name in zip(binary_masks, image_names):
+            for c, segm in enumerate(binary_mask):
                 rle = encode_mask_to_rle(segm)
                 self.rles.append(rle)
                 self.filename_and_class.append(f"{IND2CLASS[c]}_{image_name}")

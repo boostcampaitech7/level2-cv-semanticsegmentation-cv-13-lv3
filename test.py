@@ -27,9 +27,9 @@ def test_model(args):
     test_dataset = XRayDataset(image_files=np.array(pngs), transforms=A.Resize(args.input_size, args.input_size))  # 원하는 입력 크기로 조정
     test_loader = DataLoader(
         dataset=test_dataset,
-        batch_size=8,
+        batch_size=args.batch_size,
         shuffle=False,
-        num_workers=8,
+        num_workers=args.num_workers,
         drop_last=False
     )
 
