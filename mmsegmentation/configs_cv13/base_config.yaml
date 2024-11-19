@@ -1,9 +1,9 @@
-checkpoint_dir: ./checkpoints/segformer
-checkpoint_file: s
+checkpoint_dir: ./checkpoints
+checkpoint_file: segformer.pth
 project_name: project4_mmseg_test
 
 #----------------------------------#
-run_name: upernet_15epochs
+run_name: segformer_20000
 
 seed: 42
 
@@ -13,13 +13,15 @@ num_workers: 2
 lr: 6e-4
 
 input_size: 512
-max_step: 5000
-valid_step: 1000
+max_step: 20000
+valid_step: 2000
 
 amp: True
 
 resume: True
 wandb_id: -1
+
+config: configs_cv13/segformer.py
 
 auto_eval: True
 tta: False
