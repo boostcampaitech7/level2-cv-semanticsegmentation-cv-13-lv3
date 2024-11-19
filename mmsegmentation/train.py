@@ -128,7 +128,7 @@ def train(yaml_cfg):
 
 
 if __name__ == '__main__':
-    yaml_config_path = '../lightningmodule/configs/base_config.yaml'
+    yaml_config_path = './configs_cv13/base_config.yaml'
     with open(yaml_config_path, 'r') as f:
         cfg = OmegaConf.load(f)  
     train(cfg)
