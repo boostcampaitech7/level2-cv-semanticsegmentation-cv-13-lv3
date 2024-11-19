@@ -1,23 +1,24 @@
-checkpoint_dir: ./checkpoints/pspnet/resnet152/1024
-checkpoint_file: pspnet_resnet152_1024_best_model
-project_name: PSPNet
+
+checkpoint_dir: ./checkpoints
+checkpoint_file: fcn_resnet50_best_model.pt
+project_name: project4_test_run
 
 #----------------------------------#
-run_name: resnet152_16bs_1024_100ep
+run_name: test yaml
 
-architecture: PSPNet               # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
-encoder_name: resnet152
+architecture: Unet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
+encoder_name: efficientnet-b0
 encoder_weight: imagenet
 
 seed: 42
 
-batch_size: 16
+batch_size: 20
 num_workers: 8
 
 lr: 1e-4
 
-input_size: 1024
-max_epoch: 101
+input_size: 512
+max_epoch: 5
 valid_interval: 5
 
 amp: True

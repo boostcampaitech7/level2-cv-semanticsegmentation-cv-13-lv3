@@ -17,6 +17,7 @@ from lightning.pytorch.utilities import rank_zero_info
 from utils.Gsheet import Gsheet_param
 from test import test_model  # 테스트 함수 임포트
 
+# 모델 학습과 검증을 수행하는 함수
 def train_model(args):
     args_dict = OmegaConf.to_container(args, resolve=True)
     run_name = args_dict.pop('run_name', None)
@@ -62,16 +63,17 @@ def train_model(args):
         label_files=valid_files['labelnames'],
         transforms=A.Resize(args.input_size, args.input_size)
     )
-
     train_loader = DataLoader(
-        dataset=train_dataset,
+        dataset=train_dataset, 
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=args.num_workers,
         drop_last=True,
     )
+      
+    # 주의: validation data는 이미지 크기가 크기 때문에 `num_wokers`는 커지면 메모리 에러가 발생할 수 있습니다.
     valid_loader = DataLoader(
-        dataset=valid_dataset,
+        dataset=valid_dataset, 
         batch_size=2,
         shuffle=False,
         num_workers=7,
@@ -88,6 +90,7 @@ def train_model(args):
         encoder_weight=args.encoder_weight
     )
 
+    # 체크포인트 콜백 설정
     checkpoint_callback = ModelCheckpoint(
         dirpath=args.checkpoint_dir,
         filename=args.checkpoint_file,
@@ -119,8 +122,6 @@ def train_model(args):
     if args.auto_eval:
         print("Train 완료 -> Test 시작!")
         test_model(args)  # 테스트 함수 호출
-
-
 
 if __name__ == '__main__':
     parser = ArgumentParser()
