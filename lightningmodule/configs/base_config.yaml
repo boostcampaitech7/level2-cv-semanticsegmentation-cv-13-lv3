@@ -7,10 +7,6 @@ run_name: segformer
 
 seed: 42
 
-architecture: Unet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
-encoder_name: efficientnet-b0
-encoder_weight: imagenet
-
 batch_size: 1
 num_workers: 2
 
