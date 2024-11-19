@@ -1,31 +1,23 @@
 checkpoint_dir: ./checkpoints
-checkpoint_file: segformer.pth
-project_name: project4_mmseg_test
+checkpoint_file: fcn_resnet50_best_model.pt
+project_name: project4_test_run
 
 #----------------------------------#
-run_name: segformer
-
-seed: 42
+run_name: test yaml
 
 architecture: Unet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
 encoder_name: efficientnet-b0
 encoder_weight: imagenet
 
-batch_size: 1
-num_workers: 2
+seed: 42
 
-lr: 6e-4
+batch_size: 20
+num_workers: 8
+
+lr: 1e-4
 
 input_size: 512
 max_epoch: 5
-max_step: 20000
-valid_interval: 1
-valid_step: 10000
+valid_interval: 5
 
 amp: True
-
-resume: True
-wandb_id: -1
-
-auto_eval: True
-tta: False
