@@ -1,0 +1,25 @@
+checkpoint_dir: ./checkpoints
+checkpoint_file: segformer.pth
+project_name: project4_mmseg_test
+
+#----------------------------------#
+run_name: segformer
+
+seed: 42
+
+batch_size: 1
+num_workers: 2
+
+lr: 6e-4
+
+input_size: 512
+max_step: 20000
+valid_step: 10000
+
+amp: True
+
+resume: True
+wandb_id: -1
+
+auto_eval: True
+tta: False

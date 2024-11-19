@@ -1,6 +1,6 @@
 __pycache__/
-checkpoints/
-lightning_logs/
-wandb/
-visualize/
+lightning/checkpoints/
+lightning/lightning_logs/
+lightning/wandb/
+lightning/visualize/
 CVAT/
