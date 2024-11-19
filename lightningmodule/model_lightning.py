@@ -12,9 +12,9 @@ import pandas as pd
 from model import load_model
 
 class SegmentationModel(LightningModule):
-    def __init__(self, criterion, learning_rate, thr=0.5):
+    def __init__(self, criterion, learning_rate, thr=0.5, architecture="Unet", encoder_name="resnet50", encoder_weight="imagenet"):
         super(SegmentationModel, self).__init__()
-        self.model = load_model()
+        self.model = load_model(architecture, encoder_name, encoder_weight)
         self.criterion = criterion
         self.lr = learning_rate
         self.thr = thr
