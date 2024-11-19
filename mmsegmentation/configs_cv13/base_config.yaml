@@ -1,20 +1,20 @@
-checkpoint_dir: ./checkpoints
-checkpoint_file: segformer.pth
+checkpoint_dir: ./checkpoints/segformer
+checkpoint_file: s
 project_name: project4_mmseg_test
 
 #----------------------------------#
-run_name: segformer
+run_name: upernet_15epochs
 
 seed: 42
 
-batch_size: 1
+batch_size: 3
 num_workers: 2
 
 lr: 6e-4
 
 input_size: 512
-max_step: 20000
-valid_step: 10000
+max_step: 5000
+valid_step: 1000
 
 amp: True
 

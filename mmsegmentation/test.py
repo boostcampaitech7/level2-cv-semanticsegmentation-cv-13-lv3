@@ -41,7 +41,7 @@ def set_yaml_config_test(config, yaml_config):
         config.tta_model.module = config.model
         config.model = config.tta_model
 
-    ckpt_filepath = os.path.join(yaml_config.checkpoint_dir, osp.basename(yaml_config.checkpoint_file)[0] + 'pth')
+    ckpt_filepath = os.path.join(yaml_config.checkpoint_dir, osp.basename(yaml_config.checkpoint_file) + '.pth')
     config.load_from = ckpt_filepath
     
     return config
@@ -87,9 +87,10 @@ def test(args, yaml_cfg):
     # add output_dir in metric
     cfg.test_evaluator['keep_results'] = True
 
+    cfg.resume = False
+    
     # build the runner from config
     runner = Runner.from_cfg(cfg)
-
     # start testing
     runner.test()
 

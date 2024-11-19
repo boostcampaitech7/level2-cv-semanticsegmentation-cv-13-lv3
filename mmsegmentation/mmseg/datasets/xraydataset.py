@@ -42,7 +42,6 @@ class XRayDataset(BaseSegDataset):
         """
         
         data_list = []
-
         for idx, (img) in enumerate(self.image_files):
             data_info = dict(img_path = img)
             if self.label_files is not None:
