@@ -16,6 +16,18 @@ from lightning.pytorch.loggers import WandbLogger
 from utils.Gsheet import Gsheet_param
 from test import test_model  # 테스트 함수 임포트
 
+class CustomModelCheckpoint(ModelCheckpoint):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def _format_checkpoint_name(self, filename, metrics, auto_insert_metric_name=False):
+        # metrics에서 epoch 값 가져오기
+        epoch_num = f"{metrics['epoch']:02d}" if 'epoch' in metrics else "unknown"
+
+        # 파일 이름 형식 지정 (에폭 번호만 포함, val/dice 제거)
+        return f"{self.filename}-bestEp_{epoch_num}"
+
+
 # 모델 학습과 검증을 수행하는 함수
 def train_model(args):
     args_dict = OmegaConf.to_container(args, resolve=True)
@@ -89,14 +101,22 @@ def train_model(args):
         encoder_name=args.encoder_name,
         encoder_weight=args.encoder_weight
     )
-
-    # 체크포인트 콜백 설정
-    checkpoint_callback = ModelCheckpoint(
+    
+    # 체크포인트 콜백 : dice 기준 상위 k개
+    checkpoint_callback_best = CustomModelCheckpoint(
         dirpath=args.checkpoint_dir,
-        filename=args.checkpoint_file,
+        filename=f"{args.checkpoint_file}",
         monitor='val/dice',
         mode='max',
         save_top_k=3
+    )
+
+    # 체크포인트 콜백 : resume 보조 마지막 학습 체크포인트 저장
+    checkpoint_callback_latest = ModelCheckpoint(
+        dirpath=args.checkpoint_dir,
+        filename=args.checkpoint_file + "-latest",
+        save_top_k=1,
+        every_n_epochs=1  # 매 에폭마다 저장
     )
 
     trainer = Trainer(
@@ -104,7 +124,7 @@ def train_model(args):
         log_every_n_steps=5,
         max_epochs=args.max_epoch,
         check_val_every_n_epoch=args.valid_interval,
-        callbacks=[checkpoint_callback],
+        callbacks=[checkpoint_callback_best, checkpoint_callback_latest],
         accelerator='gpu',
         devices=1 if torch.cuda.is_available() else None,
         precision="16-mixed" if args.amp else 32,
