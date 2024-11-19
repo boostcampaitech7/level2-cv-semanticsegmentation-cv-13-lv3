@@ -4,7 +4,9 @@ from torch.utils.data import DataLoader
 
 from xraydataset import XRayDataset
 from utils import get_sorted_files_by_type, label2rgb, decode_rle_to_mask
+from utils import get_sorted_files_by_type, label2rgb, decode_rle_to_mask
 
+from constants import TRAIN_DATA_DIR, CLASSES, PALETTE, TEST_DATA_DIR
 from constants import TRAIN_DATA_DIR, CLASSES, PALETTE, TEST_DATA_DIR
 
 from argparse import ArgumentParser
@@ -22,6 +24,27 @@ from PIL import Image, ImageDraw
 import cv2
 
 import wandb
+
+import pandas as pd
+
+def create_pred_mask_dict(csv_path, input_size):
+    df = pd.read_csv(csv_path)
+
+    # 29개의 개별 마스크
+    for idx in range(0, len(df), len(CLASSES)):
+        lst = df.values[(idx*29):(idx*29)+29]
+
+        mask_dict = dict(image_name=list())
+        for j in range(CLASSES):
+
+            image_name = lst[j][0]
+            # RLE 데이터 추출 및 디코딩
+            rle = lst[j][2].split()
+            mask = decode_rle_to_mask(rle, input_size, input_size)
+
+            mask_dict[image_name].append(mask)
+        
+    return mask_dict
 
 import pandas as pd
 
@@ -75,6 +98,9 @@ def draw_outline(image, label, is_binary = False):
 def visualize_compare(visual_loader, mask_dict):
 
     csv_compare = False if mask_dict is None else True
+def visualize_compare(visual_loader, mask_dict):
+
+    csv_compare = False if mask_dict is None else True
 
     wandb.init()
     
@@ -95,6 +121,14 @@ def visualize_compare(visual_loader, mask_dict):
         '7, 15'
     ]
 
+    class_labels = []
+    if csv_compare:
+        class_labels = [{1:"GT", 2:"Pred", 3:"Overlap"} for _ in range(len(class_groups))] 
+    else:
+        class_labels = [{} for _ in range(len(class_groups))]
+        for idx, class_group in enumerate(class_groups):
+            for class_idx in class_group:
+                class_labels[idx][class_idx]=CLASSES[class_idx-1]      
     class_labels = []
     if csv_compare:
         class_labels = [{1:"GT", 2:"Pred", 3:"Overlap"} for _ in range(len(class_groups))] 
