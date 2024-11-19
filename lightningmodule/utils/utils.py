@@ -104,7 +104,7 @@ def calculate_confusion_matrix(y_true, y_pred, num_classes, threshold):
         for j in range(num_classes):
             true_i = y_true[i].flatten()
             pred_j = y_pred[j].flatten()
-            # intersection 계산 후 비율로 변환
+            # intersection 계산
             intersection = torch.sum(true_i * pred_j)
             # i번째 클래스의 전체 픽셀 수로 나누어 비율 계산
             ratio = intersection / (total_pixels_per_class + 1e-6)  # 0 나눗셈 방지
@@ -114,6 +114,7 @@ def calculate_confusion_matrix(y_true, y_pred, num_classes, threshold):
 
 def calculate_metrics(confusion_matrix):
     """
+    TODO:
     Calculate metrics from confusion matrix.
     """
     # 각 클래스에 대한 TP, FP, FN 계산
@@ -130,13 +131,12 @@ def calculate_metrics(confusion_matrix):
 
 def save_confusion_matrix(confusion_matrix, classes):
 
-    # Create figure and axes
     plt.figure(figsize=(15, 12))
     
-    # Create heatmap using the averaged confusion matrix
+    # heatmap 시각화
     sns.heatmap(confusion_matrix.cpu().numpy(), 
                 annot=True,
-                fmt='.3f',  # 소수점 3자리까지 표시
+                fmt='.2f',  # 소수점 3자리까지 표시
                 cmap='Blues',
                 xticklabels=classes,
                 yticklabels=classes)
@@ -145,14 +145,13 @@ def save_confusion_matrix(confusion_matrix, classes):
     plt.xlabel('Predicted')
     plt.ylabel('True')
     
-    # Rotate x-axis labels for better readability
+    # Rotate x-axis labels
     plt.xticks(rotation=45, ha='right')
     plt.yticks(rotation=0)
     
-    # Adjust layout to prevent label cutoff
+    # Label이 잘리지 않도록 layout 조정
     plt.tight_layout()
     
-    # Save the plot
     plt.savefig('confusion_matrix.png')
     plt.close()
     

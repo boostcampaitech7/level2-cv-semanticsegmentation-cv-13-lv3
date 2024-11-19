@@ -18,6 +18,6 @@ lr: 1e-4
 
 input_size: 512
 max_epoch: 10
-valid_interval: 1
+valid_interval: 5
 
 amp: True
