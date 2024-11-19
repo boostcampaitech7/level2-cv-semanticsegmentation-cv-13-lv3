@@ -1,9 +1,9 @@
-checkpoint_dir: ./checkpoints/pspnet/resnet152/1e-4
-checkpoint_file: pspnet_resnet152_best_model
+checkpoint_dir: ./checkpoints/pspnet/resnet152/1024
+checkpoint_file: pspnet_resnet152_1024_best_model
 project_name: PSPNet
 
 #----------------------------------#
-run_name: resnet152_16bs_100ep
+run_name: resnet152_16bs_1024_100ep
 
 architecture: PSPNet               # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
 encoder_name: resnet152
@@ -11,18 +11,13 @@ encoder_weight: imagenet
 
 seed: 42
 
-batch_size: 4
-num_workers: 4
+batch_size: 16
+num_workers: 8
 
 lr: 1e-4
 
-input_size: 2048
-max_epoch: 100
+input_size: 1024
+max_epoch: 101
 valid_interval: 5
 
 amp: True
-
-resume: True # true면 체크포인트에서 학습 재개, false면 새로 시작
-wandb_id: None # resume: True일 때만 WandB ID 설정
-
-auto_eval: False
