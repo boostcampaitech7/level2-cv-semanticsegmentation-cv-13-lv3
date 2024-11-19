@@ -1,6 +1,8 @@
 __pycache__/
 lightningmodule/checkpoints/
-lightningmodule/lightning_logs/
-lightningmodule/wandb/
+lightning_logs/
+wandb/
 lightningmodule/visualize/
 CVAT/
+*.out
+*.csv
