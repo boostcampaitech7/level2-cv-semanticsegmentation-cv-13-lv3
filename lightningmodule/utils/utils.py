@@ -5,10 +5,6 @@ import random
 
 import os
 
-import seaborn as sns
-import matplotlib.pyplot as plt
-import numpy as np
-
 # 시각화를 위한 팔레트를 설정합니다.
 PALETTE = [
     (220, 20, 60), (119, 11, 32), (0, 0, 142), (0, 0, 230), (106, 0, 228),
@@ -85,65 +81,3 @@ def decode_rle_to_mask(rle, height, width):
         img[lo:hi] = 1
     
     return img.reshape(height, width)
-
-def calculate_confusion_matrix(y_true, y_pred, num_classes, threshold):
-    # y_true: [B, C, H, W], y_pred: [B, C, H, W]
-    batch_size = y_true.size(0)
-    confusion_matrix = torch.zeros(num_classes, num_classes, device=y_true.device)
-    
-    # threshold 적용
-    y_pred = (y_pred > threshold).float()
-
-    # 배치의 각 이미지에 대해 계산
-    for b in range(batch_size):
-        # 각 클래스의 Calculate confusion matrix
-        for i in range(num_classes):
-            for j in range(num_classes):
-                true_i = y_true[b, i].flatten()  # b번째 배치의 i번째 클래스
-                pred_j = y_pred[b, j].flatten()  # b번째 배치의 j번째 클래스
-                
-                # intersection (TP: True Positive)
-                intersection = torch.sum(true_i * pred_j)
-                
-                # 실제 해당 클래스의 전체 픽셀 수
-                total_true_pixels = torch.sum(true_i)
-                
-                # 비율 계산 (TP / Total True)
-                ratio = intersection / (total_true_pixels + 1e-6)
-                confusion_matrix[i, j] += ratio.item()
-    
-    # 배치 크기로 나누어 평균 계산
-    confusion_matrix = confusion_matrix / batch_size
-    
-    # 행별로 정규화 (각 행의 합이 1이 되도록)
-    confusion_matrix = confusion_matrix / confusion_matrix.sum(dim=1, keepdim=True).clamp(min=1e-6)
-    
-    return confusion_matrix
-
-def save_confusion_matrix(confusion_matrix, classes):
-
-    plt.figure(figsize=(15, 12))
-    
-    # heatmap 시각화
-    sns.heatmap(confusion_matrix.cpu().numpy(), 
-                annot=True,
-                fmt='.1f',  # 소수점 3자리까지 표시
-                cmap='Blues',
-                xticklabels=classes,
-                yticklabels=classes)
-    
-    plt.title('Confusion Matrix')
-    plt.xlabel('Predicted')
-    plt.ylabel('True')
-    
-    # Rotate x-axis labels
-    plt.xticks(rotation=45, ha='right')
-    plt.yticks(rotation=0)
-    
-    # Label이 잘리지 않도록 layout 조정
-    plt.tight_layout()
-    
-    plt.savefig('confusion_matrix.png')
-    plt.close()
-    
-    print("\nConfusion matrix has been saved as 'confusion_matrix.png'")

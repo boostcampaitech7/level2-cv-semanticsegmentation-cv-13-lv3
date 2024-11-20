@@ -12,7 +12,7 @@ import pandas as pd
 from model import load_model
 
 class SegmentationModel(LightningModule):
-    def __init__(self, criterion, learning_rate, thr=0.5, architecture="Unet", encoder_name="resnet50", encoder_weight="imagenet", use_confusion_matrix=False):
+    def __init__(self, criterion, learning_rate, thr=0.5, architecture="Unet", encoder_name="resnet50", encoder_weight="imagenet"):
         super(SegmentationModel, self).__init__()
         self.save_hyperparameters(ignore=['criterion'])  # criterion은 제외
         self.model = load_model(architecture, encoder_name, encoder_weight)
@@ -25,9 +25,6 @@ class SegmentationModel(LightningModule):
         
         self.rles = []
         self.filename_and_class = []
-        
-        self.use_confusion_matrix = use_confusion_matrix
-        self.confusion_matrix = None
 
         self.save_hyperparameters()
 
@@ -53,10 +50,6 @@ class SegmentationModel(LightningModule):
     def on_train_epoch_end(self):
         self.log('epoch', self.current_epoch)  # 에폭 번호를 로그로 기록
 
-    def on_validation_epoch_start(self):
-        if self.use_confusion_matrix:
-            self.confusion_matrix = torch.zeros(len(CLASSES), len(CLASSES), device=self.device)
-
     def validation_step(self, batch, batch_idx):
         _, images, masks = batch
         outputs = self(images)
@@ -70,15 +63,6 @@ class SegmentationModel(LightningModule):
 
         outputs = torch.sigmoid(outputs)
         
-        if self.use_confusion_matrix:
-            batch_conf_matrix = calculate_confusion_matrix(
-                masks,
-                outputs,
-                num_classes=len(CLASSES),
-                threshold=self.thr
-            )
-            self.confusion_matrix += batch_conf_matrix
-        
         outputs = (outputs > self.thr)
         masks = masks
         
@@ -87,10 +71,6 @@ class SegmentationModel(LightningModule):
         return dice
 
     def on_validation_epoch_end(self):
-        if self.use_confusion_matrix:
-            # confusion matrix 저장
-            save_confusion_matrix(self.confusion_matrix, CLASSES)
-        
         dices = torch.cat(self.validation_dices, 0)
         dices_per_class = torch.mean(dices, 0)
         avg_dice = torch.mean(dices_per_class).item()

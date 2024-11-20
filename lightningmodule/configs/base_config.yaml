@@ -21,4 +21,3 @@ max_epoch: 5
 valid_interval: 5
 
 amp: True
-confusion_matrix: True
