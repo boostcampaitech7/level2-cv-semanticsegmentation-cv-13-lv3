@@ -3,7 +3,7 @@ checkpoint_file: fcn_resnet50_best_model.pt
 project_name: project4_test_run
 
 #----------------------------------#
-run_name: test yaml
+run_name: aug_test
 
 architecture: Unet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
 encoder_name: efficientnet-b0
@@ -16,11 +16,11 @@ num_workers: 8
 
 lr: 1e-4
 
-clahe: true
-clahe_clip_limit: 2.0
-clahe_tile_grid_size: [8, 8]
 input_size: 512
 max_epoch: 5
 valid_interval: 5
+clahe: true
+clahe_clip_limit: 2.0
+clahe_tile_grid_size: [8, 8]
 
 amp: True
