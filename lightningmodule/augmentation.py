@@ -3,18 +3,12 @@ import numpy as np
 import albumentations as A
 
 class CLAHEAugmentation:
-    @staticmethod
-    def apply_clahe(image):
-        lab = cv2.cvtColor(image, cv2.COLOR_BGR2LAB)
-        l, a, b = cv2.split(lab)
-        clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8, 8))
-        cl = clahe.apply(l)
-        lab_clahe = cv2.merge((cl, a, b))
-        return cv2.cvtColor(lab_clahe, cv2.COLOR_LAB2BGR)
+    def __init__(self, clip_limit=2.0, tile_grid_size=(8, 8)):
+        self.clip_limit = clip_limit
+        self.tile_grid_size = tile_grid_size
 
-    @staticmethod
-    def albumentations_clahe():
-        return A.CLAHE(clip_limit=2.0, tile_grid_size=(8, 8), always_apply=True)
+    def albumentations_clahe(self):
+        return A.CLAHE(clip_limit=self.clip_limit, tile_grid_size=self.tile_grid_size, always_apply=True)
 
 class EqualizeHistAugmentation:
     @staticmethod
