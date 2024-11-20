@@ -5,9 +5,7 @@ import os
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.append(parent_dir)
-from constants import CLASSES, PALETTE, CLASS2IND
 from utils import get_sorted_files_by_type
-from PIL import Image
 import numpy as np
 
 # 경로에서 '/'로 나뉜 부분 중 변경하고싶은 부분 지정해서 바꾸기
