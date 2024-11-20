@@ -3,7 +3,7 @@ import sys
 sys.path.append('../lightningmodule')
 
 from omegaconf import OmegaConf
-from utils.utils import get_sorted_files_by_type, encode_mask_to_rle
+from utils import get_sorted_files_by_type, encode_mask_to_rle
 from constants import IND2CLASS
 
 # Copyright (c) OpenMMLab. All rights reserved.
@@ -22,7 +22,7 @@ from argparse import Namespace
 
 def set_xraydataset(config):
 
-    TEST_DATA_DIR = 'data/test'
+    TEST_DATA_DIR = 'data/train'
 
     image_root = os.path.join(TEST_DATA_DIR, 'DCM')
     pngs = get_sorted_files_by_type(image_root, 'png')

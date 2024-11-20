@@ -2,7 +2,7 @@
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from xraydataset import XRayDataset, split_data
-from utils.utils import get_sorted_files_by_type, set_seed
+from utils import get_sorted_files_by_type, set_seed
 from constants import TRAIN_DATA_DIR
 from argparse import ArgumentParser, Namespace
 import albumentations as A
@@ -13,7 +13,7 @@ from omegaconf import OmegaConf
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
-from utils.Gsheet import Gsheet_param
+from tools.Gsheet import Gsheet_param
 from test import test_model  # 테스트 함수 임포트
 from augmentation import CLAHEAugmentation
 
