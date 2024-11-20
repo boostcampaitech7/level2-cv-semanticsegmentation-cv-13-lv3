@@ -40,16 +40,6 @@ def train_model(args):
     # 체크포인트 경로 설정
     checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}.ckpt")
 
-    if args.clahe:
-        print("Using CLAHE augmentation")
-        train_transforms = A.Compose([
-            CLAHEAugmentation.albumentations_clahe(),
-            A.Resize(args.input_size, args.input_size)
-        ])
-    else:
-        print("No augmentation applied")
-        train_transforms = A.Resize(args.input_size, args.input_size)
-
     # WandB 설정
     wandb_logger = WandbLogger(
         project=project_name,
@@ -65,23 +55,16 @@ def train_model(args):
     pngs = get_sorted_files_by_type(image_root, 'png')
     jsons = get_sorted_files_by_type(label_root, 'json')
     train_files, valid_files = split_data(pngs, jsons)
-
+    
+    train_transforms = [A.Resize(args.input_size, args.input_size)]
     if args.clahe:
         print("Using CLAHE augmentation")
-        train_transforms = A.Compose([
-            CLAHEAugmentation.albumentations_clahe(),
-            A.Resize(args.input_size, args.input_size)
-        ])
-    elif args.eh:
-        print("Using EqualizeHist augmentation")
-        train_transforms = A.Compose([
-            A.Lambda(image=EqualizeHistAugmentation.apply_equalize_hist),
-            A.Resize(args.input_size, args.input_size)
-        ])
+        train_transforms.append(CLAHEAugmentation.albumentations_clahe())
     else:
         print("No augmentation applied")
-        train_transforms = A.Resize(args.input_size, args.input_size)
-
+        
+    train_transforms = A.Compose(train_transforms)
+    
     train_dataset = XRayDataset(
         image_files=train_files['filenames'],
         label_files=train_files['labelnames'],
