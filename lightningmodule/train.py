@@ -15,6 +15,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from utils.Gsheet import Gsheet_param
 from test import test_model  # 테스트 함수 임포트
+from augmentation import CLAHEAugmentation, EqualizeHistAugmentation
 
 class CustomModelCheckpoint(ModelCheckpoint):
     def __init__(self, *args, **kwargs):
@@ -39,15 +40,15 @@ def train_model(args):
     # 체크포인트 경로 설정
     checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}.ckpt")
 
-    if args.resume:
-        # Resume 설정 확인
-        if os.path.exists(checkpoint_path):
-            print(f"Resume : <{checkpoint_path}> 체크포인트에서 학습 재개")
-        else:
-            raise FileNotFoundError(f"Resume : 체크포인트가 존재하지 않음 <{checkpoint_path}>")
+    if args.clahe:
+        print("Using CLAHE augmentation")
+        train_transforms = A.Compose([
+            CLAHEAugmentation.albumentations_clahe(),
+            A.Resize(args.input_size, args.input_size)
+        ])
     else:
-        checkpoint_path = None
-        print("No Resume : 새로운 학습 시작")
+        print("No augmentation applied")
+        train_transforms = A.Resize(args.input_size, args.input_size)
 
     # WandB 설정
     wandb_logger = WandbLogger(
@@ -65,11 +66,28 @@ def train_model(args):
     jsons = get_sorted_files_by_type(label_root, 'json')
     train_files, valid_files = split_data(pngs, jsons)
 
+    if args.clahe:
+        print("Using CLAHE augmentation")
+        train_transforms = A.Compose([
+            CLAHEAugmentation.albumentations_clahe(),
+            A.Resize(args.input_size, args.input_size)
+        ])
+    elif args.eh:
+        print("Using EqualizeHist augmentation")
+        train_transforms = A.Compose([
+            A.Lambda(image=EqualizeHistAugmentation.apply_equalize_hist),
+            A.Resize(args.input_size, args.input_size)
+        ])
+    else:
+        print("No augmentation applied")
+        train_transforms = A.Resize(args.input_size, args.input_size)
+
     train_dataset = XRayDataset(
         image_files=train_files['filenames'],
         label_files=train_files['labelnames'],
-        transforms=A.Resize(args.input_size, args.input_size)
+        transforms=train_transforms
     )
+    
     valid_dataset = XRayDataset(
         image_files=valid_files['filenames'],
         label_files=valid_files['labelnames'],
@@ -149,6 +167,7 @@ if __name__ == '__main__':
     parser.add_argument("--resume", action="store_true", help="resume으로 실행할 건지")
     parser.add_argument("--wandb_id", type=str, default=None, help="resume 할 때 WandB에서 기존 실험에 이어서 기록하게 wandb id")
     parser.add_argument("--auto_eval", action="store_true", help="학습 끝나고 자동으로 test 실행")
+    parser.add_argument("--clahe", action="store_true", help="CLAHE 증강을 사용할지 여부")
     
     args = parser.parse_args()
     with open(args.config, 'r') as f:
@@ -157,6 +176,7 @@ if __name__ == '__main__':
     cfg.resume = args.resume
     cfg.wandb_id = args.wandb_id
     cfg.auto_eval = args.auto_eval
+    cfg.clahe = args.clahe
     
     train_model(cfg)
     Gsheet_param(cfg)
