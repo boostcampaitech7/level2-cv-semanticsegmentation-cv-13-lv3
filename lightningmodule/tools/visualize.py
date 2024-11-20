@@ -6,7 +6,7 @@ sys.path.append('../')
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from xraydataset import XRayDataset
+from xraydataset import XRayDataset, split_data
 from utils import get_sorted_files_by_type, label2rgb, decode_rle_to_mask
 
 from constants import TRAIN_DATA_DIR, CLASSES, PALETTE, TEST_DATA_DIR
@@ -62,25 +62,6 @@ def ready_for_visualize(image, label):
 
     return img, lbl
 
-def draw_outline(image, label, is_binary = False):
-
-    draw = ImageDraw.Draw(image)
-
-    for i, class_label in enumerate(label):
-        if class_label.max() > 0:  # Only process if the class is present in the image
-            color = PALETTE[i] if not is_binary else 1
-
-            # Find the points for the outline
-            contours, _ = cv2.findContours(class_label, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
-            
-            # Draw each contour as a polygon
-            for contour in contours:
-                pts = [(int(point[0][0]), int(point[0][1])) for point in contour]
-                draw.polygon(pts, outline=color)
-
-    return image
-    
-
 # 모델 학습과 검증을 수행하는 함수
 def visualize_compare(args, visual_loader, mask_dict):
 
@@ -130,7 +111,8 @@ def visualize_compare(args, visual_loader, mask_dict):
                     pred = mask_dict.get(image_name, None)
 
                 # Initialize the mask array
-                combined_mask_gt = np.zeros(shape=(len(class_groups), args.input_size, args.input_size), dtype=np.uint8)  # Shape: (H, W)
+                if args.gt:
+                    combined_mask_gt = np.zeros(shape=(len(class_groups), args.input_size, args.input_size), dtype=np.uint8)  # Shape: (H, W)
                 combined_mask_pred = np.zeros(shape=(len(class_groups), args.input_size, args.input_size), dtype=np.uint8)  # Shape: (H, W)
                 combined_mask_cmp = np.zeros(shape=(len(class_groups), args.input_size, args.input_size), dtype=np.uint8)  # Shape: (H, W)
                 # Assign unique IDs to each group
@@ -146,29 +128,44 @@ def visualize_compare(args, visual_loader, mask_dict):
                             combined_mask_cmp[group_id][(gt_mask == 1) & (pred_mask == 1)] = 3  # 겹치는 영역
 
                             combined_mask_pred[group_id][pred_mask == 1] = class_index  # lbl is 0-indexed, so subtract 1
-                        combined_mask_gt[group_id][gt_mask == 1] = class_index  # lbl is 0-indexed, so subtract 1
-                            
-                masks_gt = dict()
-                for i, mask in enumerate(combined_mask_gt):
-                    masks_gt[class_group_label[i]] = dict(mask_data=mask,class_labels=class_labels[i])
-
-                masked_image_gt = wandb.Image(img, masks=masks_gt, caption=image_name)      
+                        if args.gt:
+                            combined_mask_gt[group_id][gt_mask == 1] = class_index  # lbl is 0-indexed, so subtract 1
+                if args.gt:   
+                    masks_gt = dict()
+                    for i, mask in enumerate(combined_mask_gt):
+                        masks_gt[class_group_label[i]] = dict(mask_data=mask,class_labels=class_labels[i])
+                    masked_image_gt = wandb.Image(img, masks=masks_gt, caption=image_name)      
+                    wandb.log({"GT Mask":masked_image_gt})
 
                 masks_pred = dict()
                 for i, mask in enumerate(combined_mask_pred):
                     masks_pred[class_group_label[i]] = dict(mask_data=mask,class_labels=class_labels[i])
-
-                masked_image_pred = wandb.Image(img, masks=masks_pred, caption=image_name)      
+                masked_image_pred = wandb.Image(img, masks=masks_pred, caption=image_name)  
+                wandb.log({"Pred Mask":masked_image_pred})    
 
                 masks_cmp = dict()
                 for i, mask in enumerate(combined_mask_cmp):
                     masks_cmp[class_group_label[i]] = dict(mask_data=mask,class_labels=class_labels_cmp[i])
-
                 masked_image_cmp = wandb.Image(img, masks=masks_cmp, caption=image_name)      
-
-                wandb.log({"GT Mask":masked_image_gt})
-                wandb.log({"Pred Mask":masked_image_pred})
                 wandb.log({"Mask Compare":masked_image_cmp})
+
+def draw_outline(image, label, is_binary = False):
+
+    draw = ImageDraw.Draw(image)
+
+    for i, class_label in enumerate(label):
+        if class_label.max() > 0:  # Only process if the class is present in the image
+            color = PALETTE[i] if not is_binary else 1
+
+            # Find the points for the outline
+            contours, _ = cv2.findContours(class_label, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            
+            # Draw each contour as a polygon
+            for contour in contours:
+                pts = [(int(point[0][0]), int(point[0][1])) for point in contour]
+                draw.polygon(pts, outline=color)
+
+    return image
 
 def visual_dataset(visual_loader):
     save_dir = 'visualize/'
@@ -192,31 +189,31 @@ def parse_args():
 
     parser.add_argument("--input_size", type=int, default=512)
     parser.add_argument("--gt", action="store_true", help="upload gt")
-    parser.add_argument("--wandb", action="store_true", help="upload image into wandb")
+    parser.add_argument("--local", action="store_true", help="save aug into local")
     parser.add_argument("--csv", type=str, default=None)
-    #parser.add_argument("--compare", action="store_true", help="upload image into wandb")
 
     args = parser.parse_args()
 
     return args
 
-if __name__ == '__main__':
+def main():
     args = parse_args()
 
-    root = TRAIN_DATA_DIR
-    pngs, jsons = None, None
+    image_root = os.path.join(TRAIN_DATA_DIR, 'DCM')
+    label_root = os.path.join(TRAIN_DATA_DIR, 'outputs_json')
 
-    # if args.csv is None:
-    label_root = os.path.join(root, 'outputs_json')
-
-    jsons = get_sorted_files_by_type(label_root, 'json')
-    # else:
-    #     root = TEST_DATA_DIR
-
-    image_root = os.path.join(root, 'DCM')
     pngs = get_sorted_files_by_type(image_root, 'png')
+    jsons = get_sorted_files_by_type(label_root, 'json')
 
-    visualize_dataset = XRayDataset(image_files=np.array(pngs), label_files=jsons, transforms=A.Resize(args.input_size, args.input_size))
+    image_files, label_files = None, None
+
+    if not args.gt:
+        _, valid_files = split_data(pngs, jsons)
+        image_files, label_files = valid_files['filenames'], valid_files['labelnames']
+    else: # 모든 train에 대한 업로드를 진행
+        image_files, label_files = np.array(pngs), jsons
+
+    visualize_dataset = XRayDataset(image_files=image_files, label_files=label_files, transforms=A.Resize(args.input_size, args.input_size))
 
     visual_loader = DataLoader(
         dataset=visualize_dataset, 
@@ -226,11 +223,14 @@ if __name__ == '__main__':
         drop_last=False,
     )
 
-    mask_dict = None
-    if args.csv is not None:
-        mask_dict = create_pred_mask_dict(args.csv, args.input_size)
-
-    if args.wandb:
-        visualize_compare(args, visual_loader, mask_dict)
-    else:
+    if args.local:
         visual_dataset(visual_loader)
+    else:
+        mask_dict = None
+        if args.csv is not None:
+            mask_dict = create_pred_mask_dict(args.csv, args.input_size)
+
+        visualize_compare(args, visual_loader, mask_dict)
+
+if __name__ == '__main__':
+    main()
