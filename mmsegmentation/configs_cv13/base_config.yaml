@@ -1,14 +1,14 @@
 checkpoint_dir: ./checkpoints
-checkpoint_file: FCN_HRNet.pth
+checkpoint_file: UPerNet_HRNet.pth
 project_name: HRNet
 
 #----------------------------------#
-run_name: HRNet
+run_name: HRNet_UPerNet
 
 seed: 42
 
-batch_size: 4
-num_workers: 4
+batch_size: 2
+num_workers: 2
 
 lr: 6e-4
 
