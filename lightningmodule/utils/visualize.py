@@ -199,6 +199,8 @@ if __name__ == '__main__':
     mask_dict = None
     if args.csv is not None:
         mask_dict = create_pred_mask_dict(args.csv, args.input_size)
-    visualize_compare(visual_loader, mask_dict)
+   
+    if args.wandb:
+        visualize_compare(visual_loader, mask_dict)
     else:
         visual_dataset(visual_loader)
