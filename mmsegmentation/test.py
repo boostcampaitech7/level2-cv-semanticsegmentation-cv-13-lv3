@@ -46,33 +46,21 @@ def set_yaml_config_test(config, yaml_config):
     
     return config
 
-def inference(args, rles, filename_and_class, thr=0.5):
+def disable_wandb(config):
+    config.vis_backends = [dict(type='LocalVisBackend')]  
+    config.visualizer = dict(type='SegLocalVisualizer', vis_backends=config.vis_backends, name='visualizer')
+    return config
 
-    classes, filename = zip(*[x.split("_") for x in filename_and_class])
-
-    image_name = [os.path.basename(f) for f in filename]
-
-    df = pd.DataFrame(
-        {
-            "image_name": image_name,
-            "class": classes,
-            "rle": rles,
-        }
-    )
-
-    df.to_csv("output.csv", index=False)
-
-
-def test(args, yaml_cfg):
+def test(yaml_cfg):
 
     cfg_name = osp.splitext(osp.basename(yaml_cfg.config))[0]
     # load config
     cfg = Config.fromfile(yaml_cfg.config)
-  
-    cfg = set_xraydataset(cfg)
     cfg = set_yaml_config_test(cfg, yaml_cfg)
+    cfg = disable_wandb(cfg)
+    cfg = set_xraydataset(cfg)
 
-    cfg.launcher = args.launcher
+    cfg.launcher = 'none'
 
     if cfg.get('work_dir', None) is None:
         # use config filename as default work_dir if cfg.work_dir is None
@@ -91,13 +79,8 @@ def test(args, yaml_cfg):
     # start testing
     runner.test()
 
-    rles, filename_and_class = runner.test_evaluator.metrics[0].get_results()
-
-    inference(args, rles, filename_and_class)
-
 if __name__ == '__main__':
-    args = parse_args()
     yaml_config_path = './configs_cv13/base_config.yaml'
     with open(yaml_config_path, 'r') as f:
         cfg = OmegaConf.load(f)  
-    test(args, cfg)
+    test(cfg)
