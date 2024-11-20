@@ -21,5 +21,7 @@ amp: True
 resume: True
 wandb_id: -1
 
+config: configs_cv13/segformer.py
+
 auto_eval: True
 tta: False
