@@ -47,27 +47,24 @@ def test_model(args):
 
         # YOLO Inference
         pred_results = model.predict(source=image_path, save=False, conf=0.5)
-        if pred_results[0].masks is None:
-            print(f"No masks detected for image: {image_path}")
+        if pred_results[0].masks is None or len(pred_results[0].masks.data) == 0:
+            print(f"No valid masks detected for image: {image_path}")
             continue
 
         masks = pred_results[0].masks.data.cpu().numpy()
 
-        # Iterate over each class
-        for cls_idx, mask in enumerate(masks):
-            if cls_idx >= len(CLASSES):
-                continue
+        # Ensure all 29 classes are included
+        for cls_idx in range(len(CLASSES)):
+            if cls_idx < len(masks):
+                mask = masks[cls_idx]
+                resized_mask = cv2.resize(mask, (2048, 2048), interpolation=cv2.INTER_NEAREST)
+                binary_mask = (resized_mask > 0.5).astype(np.uint8)
+                rle = encode_mask_to_rle(binary_mask)
+            else:
+                # If mask does not exist for this class, use an empty RLE
+                rle = "0"
 
-            # Resize each mask to match DeepLab+++ resolution
-            resized_mask = cv2.resize(mask, (2048, 2048), interpolation=cv2.INTER_NEAREST)
-
-            # Binary mask conversion
-            binary_mask = (resized_mask > 0).astype(np.uint8)
-
-            # Encode to RLE
-            rle = encode_mask_to_rle(binary_mask)
-
-            # Append results
+            # Append result
             results.append({
                 "image_name": os.path.basename(image_path),
                 "class": CLASSES[cls_idx],
@@ -75,7 +72,7 @@ def test_model(args):
             })
 
     # Save results to a CSV file with correct header
-    output_csv = os.path.join(args.output_dir, "deeplab_output.csv")
+    output_csv = os.path.join(args.output_dir, "output.csv")
     df = pd.DataFrame(results, columns=["image_name", "class", "rle"])  # Ensure correct column order
     df.to_csv(output_csv, index=False, header=True)  # Include headers explicitly
     print(f"Results saved to {output_csv}")
@@ -84,7 +81,7 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument("--checkpoint_dir", type=str, required=True, help="Checkpoint directory path")
     parser.add_argument("--checkpoint_file", type=str, default="best", help="Checkpoint file name without extension")
-    parser.add_argument("--image_dir", type=str, required=True, help="Directory containing test images")
+    parser.add_argument("--image_dir", type=str, default="/data/ephemeral/home/data/test", help="Directory containing test images")
     parser.add_argument("--output_dir", type=str, default=".", help="Directory to save output CSV")
     args = parser.parse_args()
 
