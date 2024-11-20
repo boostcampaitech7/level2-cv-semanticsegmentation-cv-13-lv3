@@ -43,11 +43,6 @@ def convert_data_to_coco_format(
     
     annot_idx = 0
     for img_idx, (img_path, json_path) in tqdm(enumerate(zip(img_paths, json_paths))):
-        # image와 json name이 잘 mapping 되는지 확인
-        # img_path = img_path.replace("\\", "/").split("/")[-1].replace(".png", "")
-        # json_path = json_path.replace("\\", "/").split("/")[-1].replace(".json", "")
-        # assert img_path == json_path, f"{img_path} != {json_path}"
-        
         pil_img = Image.open(img_path)
         width, height = pil_img.size
         file_name = img_path.replace("\\", "/").split(f"{method}/")[-1]
@@ -88,8 +83,7 @@ def convert_data_to_coco_format(
             annot_idx += 1
             
     print("Finish convert data to coco format")
-    
-    # save json file
+
     coco_json["images"] = images
     coco_json["annotations"] = annotations
     coco_json["categories"] = categories
@@ -99,7 +93,6 @@ def convert_data_to_coco_format(
     
 def yolo_to_coco(root_path: str, method: str, json_path: str):       
     print("Starting convert yolo to coco format")
-    # make folder
     try:
         os.makedirs(f"{root_path}/yolo_train/images")
         os.makedirs(f"{root_path}/yolo_train/labels")
@@ -113,7 +106,6 @@ def yolo_to_coco(root_path: str, method: str, json_path: str):
         os.makedirs(f"{root_path}/yolo_valid/images")
         os.makedirs(f"{root_path}/yolo_valid/labels")
         
-    # define kfold
     IMAGE_ROOT = os.path.join(root_path, method, "DCM")
     pngs = {
         os.path.relpath(os.path.join(root, fname), start=IMAGE_ROOT)
@@ -130,14 +122,12 @@ def yolo_to_coco(root_path: str, method: str, json_path: str):
     train = []
     valid = []
     
-    # split train-valid by GroupKFold
     for i, (x, y) in enumerate(gkf.split(_filenames, ys, groups)):
         if i == 0:
             valid += list(_filenames[y])
         else:
             train += list(_filenames[y])
             
-    # get json file
     with open(json_path, 'r') as f:
         json_data = json.load(f)
         
@@ -149,13 +139,11 @@ def yolo_to_coco(root_path: str, method: str, json_path: str):
         width, height = image["width"], image["height"]
         file_name = image["file_name"]
         
-        # check train or valid
-        check = file_name.split("DCM/")[-1] in train  ## xxx/xxx.png
+        check = file_name.split("DCM/")[-1] in train  
         folder_name = "yolo_train" if check else "yolo_valid"
-        new_file_name = file_name.split("/")[-1]  ## xxx.png
-        new_label_name = new_file_name.replace(".png", ".txt")  ###.txt
+        new_file_name = file_name.split("/")[-1] 
+        new_label_name = new_file_name.replace(".png", ".txt")  
         
-        # copy file
         shutil.copy(
             os.path.join(root_path, method, file_name),
             os.path.join(root_path, folder_name, "images", new_file_name)
@@ -165,14 +153,6 @@ def yolo_to_coco(root_path: str, method: str, json_path: str):
         candits = [annot for annot in annotations if annot["image_id"] == img_id]
         for candit in candits:
             cls_id = candit["category_id"]
-            # bbox = candit["bbox"]
-            # bx, by, bw, bh = bbox
-            
-            # scaled_bx, scaled_by = bx / width, by / height
-            # scaled_bw, scaled_bh = bw / width, bh / height
-            # scaled_cx, scaled_cy = scaled_bx + scaled_bw / 2, scaled_by + scaled_bh / 2
-            # scaled_bbox = [scaled_cx, scaled_cy, scaled_bw, scaled_bh]
-            
             seg = candit["segmentation"][0]
             scaled_seg = []
             for i in range(0, len(seg), 2):
@@ -181,7 +161,6 @@ def yolo_to_coco(root_path: str, method: str, json_path: str):
                 scaled_seg.append(round(y / height, 6))
             
             with open(os.path.join(root_path, folder_name, "labels", new_label_name), "a") as f:
-                # f.write(f"{cls_id-1} {' '.join(map(str, scaled_bbox))} {' '.join(map(str, scaled_seg))}\n")
                 f.write(f"{cls_id-1} {' '.join(map(str, scaled_seg))}\n")
                 
     print("Finish convert yolo to coco format")
@@ -192,7 +171,7 @@ def yolo_to_coco(root_path: str, method: str, json_path: str):
     
 
 if __name__ == '__main__':
-    with open('./cfg/data.yaml', 'r') as file:
+    with open('../cfg/data.yaml', 'r') as file:
         config = yaml.safe_load(file)
     root_path = config['DATA_ROOT']
     convert_data_to_coco_format(root_path, "train")
