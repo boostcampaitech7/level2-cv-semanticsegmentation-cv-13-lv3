@@ -12,7 +12,7 @@ import pandas as pd
 from model import load_model
 
 class SegmentationModel(LightningModule):
-    def __init__(self, criterion, learning_rate, thr=0.5, architecture="Unet", encoder_name="resnet50", encoder_weight="imagenet"):
+    def __init__(self, criterion, learning_rate, thr=0.5, architecture="Unet", encoder_name="resnet50", encoder_weight="imagenet", confusion_matrix=False):
         super(SegmentationModel, self).__init__()
         self.save_hyperparameters(ignore=['criterion'])  # criterion은 제외
         self.model = load_model(architecture, encoder_name, encoder_weight)
@@ -25,7 +25,10 @@ class SegmentationModel(LightningModule):
         
         self.rles = []
         self.filename_and_class = []
-        self.confusion_matrix = []
+        self.use_confusion_matrix = confusion_matrix
+        self.confusion_matrix = torch.zeros(len(CLASSES), len(CLASSES), device=self.device) # confusion matrix 초기화
+        self.last_outputs = []
+        self.last_masks = []
 
         self.save_hyperparameters()
 
@@ -35,21 +38,17 @@ class SegmentationModel(LightningModule):
 
     def on_train_epoch_start(self):
         # 새로운 에폭이 시작될 때 초기화
-        self.confusion_matrix = torch.zeros(len(CLASSES), len(CLASSES), device=self.device)
-
+        if self.use_confusion_matrix:
+            self.last_outputs = []
+            self.last_masks = []
 
     def training_step(self, batch, batch_idx):
         _, images, masks = batch
         outputs = self(images)
         
-        batch_size = len(outputs)
-        for i in range(batch_size):
-            # confusion matrix 계산
-            batch_conf_matrix = calculate_confusion_matrix(masks[i], outputs[i], num_classes=len(CLASSES), threshold=self.thr)
-            self.confusion_matrix += batch_conf_matrix
-            
-        # 전체 배치 수로 나누어 평균 계산
-        self.confusion_matrix = self.confusion_matrix / batch_size
+        if self.use_confusion_matrix:
+            self.last_outputs.append(outputs)
+            self.last_masks.append(masks)
         
         # 손실 계산
         loss = self.criterion(outputs, masks)
@@ -63,7 +62,17 @@ class SegmentationModel(LightningModule):
         return loss
 
     def on_fit_end(self):
-        save_confusion_matrix(self.confusion_matrix, CLASSES)
+        if self.use_confusion_matrix:
+            batch_size = len(self.last_outputs)
+            for i in range(batch_size):
+                # confusion matrix 계산
+                batch_conf_matrix = calculate_confusion_matrix(self.last_masks[i], self.last_outputs[i], num_classes=len(CLASSES), threshold=self.thr)
+                self.confusion_matrix += batch_conf_matrix
+            
+            # 전체 배치 수로 나누어 평균 계산
+            self.confusion_matrix = self.confusion_matrix / batch_size
+            
+            save_confusion_matrix(self.confusion_matrix, CLASSES)
 
     def validation_step(self, batch, batch_idx):
         _, images, masks = batch

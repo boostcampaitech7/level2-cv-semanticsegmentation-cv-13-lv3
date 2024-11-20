@@ -99,7 +99,8 @@ def train_model(args):
         learning_rate=args.lr,
         architecture=args.architecture,
         encoder_name=args.encoder_name,
-        encoder_weight=args.encoder_weight
+        encoder_weight=args.encoder_weight,
+        confusion_matrix=args.confusion_matrix
     )
     
     # 체크포인트 콜백 : dice 기준 상위 k개
