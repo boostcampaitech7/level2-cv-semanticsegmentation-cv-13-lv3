@@ -12,7 +12,7 @@ import pandas as pd
 from model import load_model
 
 class SegmentationModel(LightningModule):
-    def __init__(self, criterion, learning_rate, thr=0.5, architecture="Unet", encoder_name="resnet50", encoder_weight="imagenet", confusion_matrix=False):
+    def __init__(self, criterion, learning_rate, thr=0.5, architecture="Unet", encoder_name="resnet50", encoder_weight="imagenet", use_confusion_matrix=False):
         super(SegmentationModel, self).__init__()
         self.save_hyperparameters(ignore=['criterion'])  # criterion은 제외
         self.model = load_model(architecture, encoder_name, encoder_weight)
@@ -25,30 +25,20 @@ class SegmentationModel(LightningModule):
         
         self.rles = []
         self.filename_and_class = []
-        self.use_confusion_matrix = confusion_matrix
-        self.confusion_matrix = torch.zeros(len(CLASSES), len(CLASSES), device=self.device) # confusion matrix 초기화
-        self.last_outputs = []
-        self.last_masks = []
+        
+        self.use_confusion_matrix = use_confusion_matrix
+        self.confusion_matrix = None
+        self.max_epochs = None
 
         self.save_hyperparameters()
 
 
     def forward(self, x):
         return self.model(x)
-
-    def on_train_epoch_start(self):
-        # 새로운 에폭이 시작될 때 초기화
-        if self.use_confusion_matrix:
-            self.last_outputs = []
-            self.last_masks = []
-
+            
     def training_step(self, batch, batch_idx):
         _, images, masks = batch
         outputs = self(images)
-        
-        if self.use_confusion_matrix:
-            self.last_outputs.append(outputs)
-            self.last_masks.append(masks)
         
         # 손실 계산
         loss = self.criterion(outputs, masks)
@@ -61,18 +51,16 @@ class SegmentationModel(LightningModule):
         self.log('train/loss', loss, on_step=True, on_epoch=False)
         return loss
 
-    def on_fit_end(self):
+    def on_train_epoch_end(self):
+        self.log('epoch', self.current_epoch)  # 에폭 번호를 로그로 기록
+
+    def on_validation_epoch_start(self):
         if self.use_confusion_matrix:
-            batch_size = len(self.last_outputs)
-            for i in range(batch_size):
-                # confusion matrix 계산
-                batch_conf_matrix = calculate_confusion_matrix(self.last_masks[i], self.last_outputs[i], num_classes=len(CLASSES), threshold=self.thr)
-                self.confusion_matrix += batch_conf_matrix
-            
-            # 전체 배치 수로 나누어 평균 계산
-            self.confusion_matrix = self.confusion_matrix / batch_size
-            
-            save_confusion_matrix(self.confusion_matrix, CLASSES)
+            if self.max_epochs is None:
+                self.max_epochs = self.trainer.max_epochs
+            if self.current_epoch == self.max_epochs - 1:
+                # 마지막 에폭에서만 confusion matrix 초기화
+                self.confusion_matrix = torch.zeros(len(CLASSES), len(CLASSES), device=self.device)
 
     def validation_step(self, batch, batch_idx):
         _, images, masks = batch
@@ -86,6 +74,16 @@ class SegmentationModel(LightningModule):
         self.log('val/loss', loss, prog_bar=True, on_step=True, on_epoch=False)
 
         outputs = torch.sigmoid(outputs)
+        
+        if self.use_confusion_matrix and self.current_epoch == self.max_epochs - 1:
+            batch_conf_matrix = calculate_confusion_matrix(
+                masks,
+                outputs,
+                num_classes=len(CLASSES),
+                threshold=self.thr
+            )
+            self.confusion_matrix += batch_conf_matrix
+        
         outputs = (outputs > self.thr)
         masks = masks
         
@@ -93,8 +91,11 @@ class SegmentationModel(LightningModule):
         self.validation_dices.append(dice)  # dice score 저장
         return dice
 
-
     def on_validation_epoch_end(self):
+        if self.use_confusion_matrix and self.current_epoch == self.max_epochs - 1:
+            # confusion matrix 저장
+            save_confusion_matrix(self.confusion_matrix, CLASSES)
+        
         dices = torch.cat(self.validation_dices, 0)
         dices_per_class = torch.mean(dices, 0)
         avg_dice = torch.mean(dices_per_class).item()
@@ -150,11 +151,6 @@ class SegmentationModel(LightningModule):
         df.to_csv("output.csv", index=False)
         print("Test results saved to output.csv")
         
-        
-    def on_train_epoch_end(self):
-        self.log('epoch', self.current_epoch)  # 에폭 번호를 로그로 기록
-
-
     def configure_optimizers(self):  
         # Optimizer 정의
         optimizer = optim.Adam(params=self.model.parameters(), lr=self.lr, weight_decay=1e-6)

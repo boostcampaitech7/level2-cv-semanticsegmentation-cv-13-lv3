@@ -87,26 +87,33 @@ def decode_rle_to_mask(rle, height, width):
     return img.reshape(height, width)
 
 def calculate_confusion_matrix(y_true, y_pred, num_classes, threshold):
+    # y_true: [B, C, H, W], y_pred: [B, C, H, W]
+    batch_size = y_true.size(0)
     confusion_matrix = torch.zeros(num_classes, num_classes, device=y_true.device)
     
     # threshold 적용
     y_pred = (y_pred > threshold).float()
 
-    # 각 클래스의 Calculate confusion matrix
-    for i in range(num_classes):
-        for j in range(num_classes):
-            true_i = y_true[i].flatten()
-            pred_j = y_pred[j].flatten()
-            
-            # intersection (TP: True Positive)
-            intersection = torch.sum(true_i * pred_j)
-            
-            # 실제 해당 클래스의 전체 픽셀 수
-            total_true_pixels = torch.sum(true_i)
-            
-            # 비율 계산 (TP / Total True)
-            ratio = intersection / (total_true_pixels + 1e-6)
-            confusion_matrix[i, j] = ratio.item()
+    # 배치의 각 이미지에 대해 계산
+    for b in range(batch_size):
+        # 각 클래스의 Calculate confusion matrix
+        for i in range(num_classes):
+            for j in range(num_classes):
+                true_i = y_true[b, i].flatten()  # b번째 배치의 i번째 클래스
+                pred_j = y_pred[b, j].flatten()  # b번째 배치의 j번째 클래스
+                
+                # intersection (TP: True Positive)
+                intersection = torch.sum(true_i * pred_j)
+                
+                # 실제 해당 클래스의 전체 픽셀 수
+                total_true_pixels = torch.sum(true_i)
+                
+                # 비율 계산 (TP / Total True)
+                ratio = intersection / (total_true_pixels + 1e-6)
+                confusion_matrix[i, j] += ratio.item()
+    
+    # 배치 크기로 나누어 평균 계산
+    confusion_matrix = confusion_matrix / batch_size
     
     # 행별로 정규화 (각 행의 합이 1이 되도록)
     confusion_matrix = confusion_matrix / confusion_matrix.sum(dim=1, keepdim=True).clamp(min=1e-6)
