@@ -28,6 +28,8 @@ import wandb
 
 import pandas as pd
 
+import datetime
+
 def create_pred_mask_dict(csv_path, input_size):
     df = pd.read_csv(csv_path)
 
@@ -36,18 +38,20 @@ def create_pred_mask_dict(csv_path, input_size):
     # 그룹화하여 처리
     grouped = df.groupby('image_name')
     for image_name, group in grouped:
-        masks = []
+        print(f'creating mask for {image_name}...')
+        masks = dict()
         for _, row in group.iterrows():
+            classname = row['class']
             rle = row['rle']
-            if isinstance(rle, list):
+            if isinstance(rle, str):
                 mask = decode_rle_to_mask(rle, 2048, 2048)
-                mask_resized = np.array(Image.fromarray(mask).resize((input_size, input_size), Image.NEAREST))
-                masks.append(mask_resized)
-        #img = Image.fromarray(label2rgb(np.array(masks)))
-        #img.save(image_name)
+                mask_resized = np.array(Image.fromarray(mask).resize((input_size, input_size)))
+                masks[classname]=mask_resized
+        # img = Image.fromarray(label2rgb(np.array(masks.items())))
+        # img.save(image_name)
         # 각 이미지를 key로 마스크 리스트 저장
         mask_dict[image_name] = masks
-        
+    print('mask creation from csv is done')
     return mask_dict
 
 def ready_for_visualize(image, label):
@@ -78,11 +82,14 @@ def draw_outline(image, label, is_binary = False):
     
 
 # 모델 학습과 검증을 수행하는 함수
-def visualize_compare(visual_loader, mask_dict):
+def visualize_compare(args, visual_loader, mask_dict):
 
     csv_compare = False if mask_dict is None else True
 
-    wandb.init()
+    time = datetime.datetime.now().strftime('%m-%d_%H:%M')
+    run_name = 'compare_mask_' + time
+    project_name = 'visualize'
+    wandb.init(project=project_name, name=run_name)
     
     # Define your class groups
     class_groups = [
@@ -132,7 +139,7 @@ def visualize_compare(visual_loader, mask_dict):
 
                         gt_mask = gt[class_index-1]
                         if pred is not None:                        
-                            pred_mask = pred[class_index-1] if len(pred) >= class_idx-1 else None
+                            pred_mask = pred.get(CLASSES[class_index-1], None)
                             # 세 가지 경우를 모두 고려하여 combined_mask 값 설정
                             combined_mask_cmp[group_id][(gt_mask == 1) & (pred_mask == 0)] = 1  # gt만 있는 영역
                             combined_mask_cmp[group_id][(gt_mask == 0) & (pred_mask == 1)] = 2  # pred만 있는 영역
@@ -184,6 +191,7 @@ def parse_args():
     parser = ArgumentParser()
 
     parser.add_argument("--input_size", type=int, default=512)
+    parser.add_argument("--gt", action="store_true", help="upload gt")
     parser.add_argument("--wandb", action="store_true", help="upload image into wandb")
     parser.add_argument("--csv", type=str, default=None)
     #parser.add_argument("--compare", action="store_true", help="upload image into wandb")
@@ -221,7 +229,8 @@ if __name__ == '__main__':
     mask_dict = None
     if args.csv is not None:
         mask_dict = create_pred_mask_dict(args.csv, args.input_size)
+
     if args.wandb:
-        visualize_compare(visual_loader, mask_dict)
+        visualize_compare(args, visual_loader, mask_dict)
     else:
         visual_dataset(visual_loader)
