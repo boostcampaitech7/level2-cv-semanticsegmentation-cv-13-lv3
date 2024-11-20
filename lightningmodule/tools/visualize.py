@@ -47,9 +47,7 @@ def create_pred_mask_dict(csv_path, input_size):
                 mask = decode_rle_to_mask(rle, 2048, 2048)
                 mask_resized = np.array(Image.fromarray(mask).resize((input_size, input_size)))
                 masks[classname]=mask_resized
-        # img = Image.fromarray(label2rgb(np.array(masks.items())))
-        # img.save(image_name)
-        # 각 이미지를 key로 마스크 리스트 저장
+
         mask_dict[image_name] = masks
     print('mask creation from csv is done')
     return mask_dict
@@ -68,7 +66,7 @@ def visualize_compare(args, visual_loader, mask_dict):
     csv_compare = False if mask_dict is None else True
 
     time = datetime.datetime.now().strftime('%m-%d_%H:%M')
-    run_name = 'compare_mask_' + time
+    run_name = args.name + '_' + time
     project_name = 'visualize'
     wandb.init(project=project_name, name=run_name)
     
@@ -191,6 +189,7 @@ def parse_args():
     parser.add_argument("--gt", action="store_true", help="upload gt")
     parser.add_argument("--local", action="store_true", help="save aug into local")
     parser.add_argument("--csv", type=str, default=None)
+    parser.add_argument("--name", type=str, default="compare_mask")
 
     args = parser.parse_args()
 
