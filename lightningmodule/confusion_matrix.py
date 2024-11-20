@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 from torch.utils.data import DataLoader
 from xraydataset import XRayDataset, split_data
-from utils.utils import get_sorted_files_by_type, set_seed
+from utils import get_sorted_files_by_type, set_seed
 from constants import TRAIN_DATA_DIR, CLASSES
 from argparse import ArgumentParser
 import albumentations as A

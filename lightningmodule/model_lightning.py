@@ -22,7 +22,7 @@ class SegmentationModel(LightningModule):
         self.best_dice = 0.0
         self.best_epoch = -1   # Best Epoch 초기화
         self.validation_dices = []  # validation_step 출력을 저장할 리스트
-        
+
         self.rles = []
         self.filename_and_class = []
 
@@ -31,12 +31,11 @@ class SegmentationModel(LightningModule):
 
     def forward(self, x):
         return self.model(x)
-            
+
+
     def training_step(self, batch, batch_idx):
         _, images, masks = batch
         outputs = self(images)
-        
-        # 손실 계산
         loss = self.criterion(outputs, masks)
         
         # 학습률 로깅
@@ -47,8 +46,6 @@ class SegmentationModel(LightningModule):
         self.log('train/loss', loss, on_step=True, on_epoch=False)
         return loss
 
-    def on_train_epoch_end(self):
-        self.log('epoch', self.current_epoch)  # 에폭 번호를 로그로 기록
 
     def validation_step(self, batch, batch_idx):
         _, images, masks = batch
@@ -62,13 +59,13 @@ class SegmentationModel(LightningModule):
         self.log('val/loss', loss, prog_bar=True, on_step=True, on_epoch=False)
 
         outputs = torch.sigmoid(outputs)
-        
         outputs = (outputs > self.thr)
         masks = masks
         
         dice = dice_coef(outputs, masks).detach().cpu()
         self.validation_dices.append(dice)  # dice score 저장
         return dice
+
 
     def on_validation_epoch_end(self):
         dices = torch.cat(self.validation_dices, 0)
@@ -126,6 +123,11 @@ class SegmentationModel(LightningModule):
         df.to_csv("output.csv", index=False)
         print("Test results saved to output.csv")
         
+        
+    def on_train_epoch_end(self):
+        self.log('epoch', self.current_epoch)  # 에폭 번호를 로그로 기록
+
+
     def configure_optimizers(self):  
         # Optimizer 정의
         optimizer = optim.Adam(params=self.model.parameters(), lr=self.lr, weight_decay=1e-6)
