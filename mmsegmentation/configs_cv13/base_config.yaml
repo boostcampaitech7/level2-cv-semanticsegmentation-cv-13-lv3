@@ -1,25 +1,27 @@
 checkpoint_dir: ./checkpoints
-checkpoint_file: segformer.pth
+checkpoint_file: segformer_18000.pth
 project_name: project4_mmseg_test
 
 #----------------------------------#
-run_name: segformer
+run_name: segformer_20000
 
 seed: 42
 
-batch_size: 1
+batch_size: 3
 num_workers: 2
 
 lr: 6e-4
 
 input_size: 512
 max_step: 20000
-valid_step: 10000
+valid_step: 2000
 
 amp: True
 
 resume: True
 wandb_id: -1
+
+config: configs_cv13/segformer.py
 
 auto_eval: True
 tta: False

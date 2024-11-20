@@ -81,3 +81,4 @@ def decode_rle_to_mask(rle, height, width):
         img[lo:hi] = 1
     
     return img.reshape(height, width)
+
