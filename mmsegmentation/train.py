@@ -7,8 +7,6 @@ from utils.Gsheet import Gsheet_param
 from utils.utils import get_sorted_files_by_type, set_seed
 from xraydataset import split_data
 
-sys.path.append('../mmseg/')
-
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
 import os
@@ -87,32 +85,23 @@ def set_yaml_cfg(config, yaml_config):
 
     config.default_hooks.checkpoint.interval=yaml_config.valid_step
     config.default_hooks.checkpoint.out_dir=yaml_config.checkpoint_dir
-    config.default_hooks.checkpoint.filename_tmpl=osp.basename(yaml_config.checkpoint_file)[0] + "_iter_{}.pth"
+    config.default_hooks.checkpoint.filename_tmpl=yaml_config.checkpoint_file.rsplit('.', 1)[0] + "_{}.pth"
 
     return config
 
 def train(yaml_cfg):
-    args = parse_args()
-
     # load config
-    cfg = Config.fromfile(args.config)
+    cfg = Config.fromfile(yaml_cfg.config)
 
     cfg = set_yaml_cfg(cfg, yaml_cfg)
     cfg = set_xraydataset(cfg)
 
-    cfg.launcher = args.launcher
+    cfg.launcher = 'none'
 
-    # work_dir is determined in this priority: CLI > segment in file > filename
-    if args.work_dir is not None:
-        # update configs according to CLI args if args.work_dir is not None
-        cfg.work_dir = args.work_dir
-    elif cfg.get('work_dir', None) is None:
+    if cfg.get('work_dir', None) is None:
         # use config filename as default work_dir if cfg.work_dir is None
         cfg.work_dir = osp.join('./work_dirs',
-                                osp.splitext(osp.basename(args.config))[0])
-
-    # resume training
-    #cfg.resume = args.resume
+                                osp.splitext(osp.basename(yaml_cfg.config))[0])
 
     # build the runner from config
     if 'runner_type' not in cfg:

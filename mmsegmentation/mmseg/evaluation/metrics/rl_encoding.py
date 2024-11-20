@@ -1,6 +1,8 @@
 import os
 import numpy as np
 
+import pandas as pd
+
 from torch import Tensor
 from typing import Any, Sequence
 from mmseg.registry import METRICS
@@ -41,8 +43,10 @@ class RLEncoding(BaseMetric):
                  collect_device='cpu',
                  prefix=None,
                  **kwargs):
+        
         self.rles = []
         self.filename_and_class = []
+
         super().__init__(collect_device=collect_device, prefix=prefix)
 
     @staticmethod
@@ -65,6 +69,7 @@ class RLEncoding(BaseMetric):
             # Retrieve metadata
             image_path = data_sample['img_path']
             image_name = os.path.basename(image_path)
+            print(image_name)
 
             # Retrieve prediction
             pred_mask = data_sample['pred_sem_seg']['data'].cpu().numpy()  # (C, H, W)
@@ -79,7 +84,22 @@ class RLEncoding(BaseMetric):
         self.results = []
 
     def compute_metrics(self, results) -> dict:
+        
+        self.inference(self.rles, self.filename_and_class)
         return {}
     
-    def get_results(self):
-        return self.rles, self.filename_and_class
+    def inference(self, rles, filename_and_class, thr=0.5):
+
+        classes, filename = zip(*[x.split("_") for x in filename_and_class])
+
+        image_name = [os.path.basename(f) for f in filename]
+
+        df = pd.DataFrame(
+            {
+                "image_name": image_name,
+                "class": classes,
+                "rle": rles,
+            }
+        )
+
+        df.to_csv("output.csv", index=False)
