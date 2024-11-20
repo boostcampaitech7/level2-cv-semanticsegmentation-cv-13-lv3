@@ -2,9 +2,8 @@ import sys
 
 sys.path.append('../lightningmodule')
 
-from omegaconf import OmegaConf
-from utils.Gsheet import Gsheet_param
-from utils.utils import get_sorted_files_by_type, set_seed
+from omegaconf import omegaconf
+from utils import get_sorted_files_by_type, set_seed, Gsheet_param
 from xraydataset import split_data
 
 sys.path.append('../mmseg/')

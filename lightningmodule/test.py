@@ -1,8 +1,8 @@
 # torch
 from torch.utils.data import DataLoader
 from xraydataset import XRayDataset
-from utils.utils import get_sorted_files_by_type
-from utils.constants import TEST_DATA_DIR
+from utils import get_sorted_files_by_type
+from constants import TEST_DATA_DIR
 from argparse import ArgumentParser
 import albumentations as A
 import os
