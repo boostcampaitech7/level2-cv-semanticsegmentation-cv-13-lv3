@@ -183,6 +183,10 @@ def confusion_matrix(args):
     confusion_matrix = calculate_confusion_matrix(labels, imgs, len(CLASSES))
     save_confusion_matrix(confusion_matrix, CLASSES)
     
+    # 삭제 output.csv file
+    if os.path.exists("./output.csv"):
+        os.remove("./output.csv")
+    
 if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument("--config", type=str, default="configs/base_config.yaml")

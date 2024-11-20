@@ -4,7 +4,7 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 from lightning import LightningModule
-from utils.utils import dice_coef, encode_mask_to_rle, calculate_confusion_matrix, save_confusion_matrix
+from utils.utils import dice_coef, encode_mask_to_rle
 
 import os
 import pandas as pd
