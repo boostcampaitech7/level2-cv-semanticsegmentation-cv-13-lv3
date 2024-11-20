@@ -15,6 +15,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from utils.Gsheet import Gsheet_param
 from test import test_model  # 테스트 함수 임포트
+from augmentation import CLAHEEqualizer
 
 class CustomModelCheckpoint(ModelCheckpoint):
     def __init__(self, *args, **kwargs):
@@ -68,7 +69,10 @@ def train_model(args):
     train_dataset = XRayDataset(
         image_files=train_files['filenames'],
         label_files=train_files['labelnames'],
-        transforms=A.Resize(args.input_size, args.input_size)
+        transforms=A.Resize([
+            CLAHEEqualizer.albumentations_clahe(),
+            A.Resize(args.input_size, args.input_size)
+        ])
     )
     valid_dataset = XRayDataset(
         image_files=valid_files['filenames'],
