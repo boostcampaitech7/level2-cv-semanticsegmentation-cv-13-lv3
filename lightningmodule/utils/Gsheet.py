@@ -29,7 +29,7 @@ def Gsheet_param(cfg):
         if idx < 3:
             pass
         else :
-            param_dict[key] = value
+            param_dict[key] = str(value)
             
 
     # sheet에 추가하기 위해서 값들을 list로 저장
