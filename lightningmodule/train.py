@@ -120,7 +120,7 @@ def train_model(args):
     )
 
     trainer = Trainer(
-        # logger=wandb_logger,
+        logger=wandb_logger,
         log_every_n_steps=5,
         max_epochs=args.max_epoch,
         check_val_every_n_epoch=args.valid_interval,
