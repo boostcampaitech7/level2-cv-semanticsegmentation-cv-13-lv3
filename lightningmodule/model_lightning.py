@@ -28,7 +28,6 @@ class SegmentationModel(LightningModule):
         
         self.use_confusion_matrix = use_confusion_matrix
         self.confusion_matrix = None
-        self.max_epochs = None
 
         self.save_hyperparameters()
 
@@ -56,11 +55,7 @@ class SegmentationModel(LightningModule):
 
     def on_validation_epoch_start(self):
         if self.use_confusion_matrix:
-            if self.max_epochs is None:
-                self.max_epochs = self.trainer.max_epochs
-            if self.current_epoch == self.max_epochs - 1:
-                # 마지막 에폭에서만 confusion matrix 초기화
-                self.confusion_matrix = torch.zeros(len(CLASSES), len(CLASSES), device=self.device)
+            self.confusion_matrix = torch.zeros(len(CLASSES), len(CLASSES), device=self.device)
 
     def validation_step(self, batch, batch_idx):
         _, images, masks = batch
@@ -75,7 +70,7 @@ class SegmentationModel(LightningModule):
 
         outputs = torch.sigmoid(outputs)
         
-        if self.use_confusion_matrix and self.current_epoch == self.max_epochs - 1:
+        if self.use_confusion_matrix:
             batch_conf_matrix = calculate_confusion_matrix(
                 masks,
                 outputs,
@@ -92,7 +87,7 @@ class SegmentationModel(LightningModule):
         return dice
 
     def on_validation_epoch_end(self):
-        if self.use_confusion_matrix and self.current_epoch == self.max_epochs - 1:
+        if self.use_confusion_matrix:
             # confusion matrix 저장
             save_confusion_matrix(self.confusion_matrix, CLASSES)
         
