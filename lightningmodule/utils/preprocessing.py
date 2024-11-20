@@ -31,6 +31,7 @@ def crop_background(img_path, json_path):
                 radius_max_y = max(radius_max_y, point[1])
                 radius_min_y = min(radius_min_y, point[1])
 
+    # padding
     min_x -= 20
     max_x += 20
     max_y = (radius_max_y+radius_min_y)//2
@@ -42,13 +43,12 @@ def crop_background(img_path, json_path):
                 if point[1] > max_y:
                     del point
 
-    # img = copy.deepcopy(img[min_y:max_y, min_x:max_x]) ##############################deepcopy 줄이래
-    img = img[min_y:max_y, min_x:max_x] ##############################deepcopy 줄이래
+    img = img[min_y:max_y, min_x:max_x] 
     
     for i, annot in enumerate(json_data['annotations']):
         points = []
         for j in range(len(annot['points'])):
-            if annot['label'] in ['Radius', 'Ulna'] and annot['points'][j][1] > max_y: ################ 팔뚝 잘랐을 때 화면 이미지 바깥의 point는 빼기
+            if annot['label'] in ['Radius', 'Ulna'] and annot['points'][j][1] > max_y: ################ 팔뚝 잘랐을 때 이미지 바깥의 point는 빼기
                 continue
             points.append([annot['points'][j][0]-min_x, annot['points'][j][1]-min_y])
         json_data['annotations'][i]['points'] = points
@@ -88,7 +88,7 @@ if __name__ == '__main__':
         # 이미지 자르기
         img, json_data = crop_background(png_path[i], json_path[i])
         
-        # 새로운 이미지 새로운 경로에 쓰기
+        # 새로운 경로에 새로운 이미지 쓰기
         cv2.imwrite(new_png_path[i], img)
         with open(new_json_path[i], 'w') as f:
             json.dump(json_data, f)
