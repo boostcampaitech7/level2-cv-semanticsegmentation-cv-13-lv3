@@ -68,8 +68,10 @@ def train_model(args):
     train_dataset = XRayDataset(
         image_files=train_files['filenames'],
         label_files=train_files['labelnames'],
-        transforms=A.Resize(args.input_size, args.input_size)
-    )
+        transforms = A.Compose([
+        A.CLAHE(clip_limit=3.0, tile_grid_size=(8, 8), p=1.0),  # CLAHE 적용
+        A.Resize(args.input_size, args.input_size)  # Resize
+        ]))
     valid_dataset = XRayDataset(
         image_files=valid_files['filenames'],
         label_files=valid_files['labelnames'],

@@ -1,23 +1,23 @@
 checkpoint_dir: ./checkpoints
-checkpoint_file: fcn_resnet50_best_model.pt
-project_name: project4_test_run
+checkpoint_file: UPerNet_Eff7_best_model.pt
+project_name: Crop_image
 
 #----------------------------------#
-run_name: test yaml
+run_name: Palm image with CLAHE
 
-architecture: Unet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
-encoder_name: efficientnet-b0
+architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
+encoder_name: efficientnet-b7
 encoder_weight: imagenet
 
 seed: 42
 
-batch_size: 20
-num_workers: 8
+batch_size: 4
+num_workers: 4
 
-lr: 1e-4
+lr: 1e-3
 
-input_size: 512
-max_epoch: 5
-valid_interval: 5
+input_size: 1024
+max_epoch: 100
+valid_interval: 10
 
 amp: True
