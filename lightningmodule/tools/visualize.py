@@ -1,4 +1,5 @@
-FEdimport sys
+import sys
+
 sys.path.append('../')
 
 # torch
@@ -38,9 +39,10 @@ def create_pred_mask_dict(csv_path, input_size):
         masks = []
         for _, row in group.iterrows():
             rle = row['rle']
-            mask = decode_rle_to_mask(rle, 2048, 2048)
-            mask_resized = np.array(Image.fromarray(mask).resize((input_size, input_size), Image.NEAREST))
-            masks.append(mask_resized)
+            if isinstance(rle, list):
+                mask = decode_rle_to_mask(rle, 2048, 2048)
+                mask_resized = np.array(Image.fromarray(mask).resize((input_size, input_size), Image.NEAREST))
+                masks.append(mask_resized)
         #img = Image.fromarray(label2rgb(np.array(masks)))
         #img.save(image_name)
         # 각 이미지를 key로 마스크 리스트 저장
@@ -118,7 +120,7 @@ def visualize_compare(visual_loader, mask_dict):
 
                 pred = None
                 if csv_compare:
-                    pred = mask_dict[image_name]
+                    pred = mask_dict.get(image_name, None)
 
                 # Initialize the mask array
                 combined_mask_gt = np.zeros(shape=(len(class_groups), args.input_size, args.input_size), dtype=np.uint8)  # Shape: (H, W)
@@ -130,7 +132,7 @@ def visualize_compare(visual_loader, mask_dict):
 
                         gt_mask = gt[class_index-1]
                         if pred is not None:                        
-                            pred_mask = pred[class_index-1]
+                            pred_mask = pred[class_index-1] if len(pred) >= class_idx-1 else None
                             # 세 가지 경우를 모두 고려하여 combined_mask 값 설정
                             combined_mask_cmp[group_id][(gt_mask == 1) & (pred_mask == 0)] = 1  # gt만 있는 영역
                             combined_mask_cmp[group_id][(gt_mask == 0) & (pred_mask == 1)] = 2  # pred만 있는 영역
