@@ -1,0 +1,24 @@
+checkpoint_dir: ./checkpoints/UPerNet/efficient
+checkpoint_file: upernet_efficientnet-b7-bestEp_19
+project_name: UPerNet
+
+#----------------------------------#
+run_name: efficientnet-b7
+
+architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
+encoder_name: efficientnet-b7
+encoder_weight: imagenet
+
+seed: 42
+
+batch_size: 4
+num_workers: 8
+
+lr: 1e-4
+
+input_size: 512
+max_epoch: 20
+valid_interval: 1
+
+amp: True
+

@@ -120,6 +120,8 @@ def visual_dataset(visual_loader, img_num=800):
             break
         for image_name, image, label in zip(image_names, images, labels):
             img, lbl = ready_for_visualize(image, label)
+            img.save(os.path.join(save_dir, f"transform_{image_name}"))         
+            
             img = draw_outline(img, lbl)
             
             img.save(os.path.join(save_dir, image_name))
