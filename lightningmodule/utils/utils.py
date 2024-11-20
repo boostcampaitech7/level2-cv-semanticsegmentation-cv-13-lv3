@@ -87,47 +87,31 @@ def decode_rle_to_mask(rle, height, width):
     return img.reshape(height, width)
 
 def calculate_confusion_matrix(y_true, y_pred, num_classes, threshold):
-    """
-    y_true: ground truth labels (B, C, H, W)
-    y_pred: predicted labels (B, C, H, W)
-    num_classes: number of classes (C)
-    returns: confusion matrix of shape (num_classes, num_classes) with ratio values
-    """
     confusion_matrix = torch.zeros(num_classes, num_classes, device=y_true.device)
     
-    # 각 클래스별 전체 픽셀 수 계산
-    total_pixels_per_class = y_true.shape[1] * y_true.shape[2]
-    y_pred = (y_pred > threshold)
+    # threshold 적용
+    y_pred = (y_pred > threshold).float()
 
     # 각 클래스의 Calculate confusion matrix
     for i in range(num_classes):
         for j in range(num_classes):
             true_i = y_true[i].flatten()
             pred_j = y_pred[j].flatten()
-            # intersection 계산
+            
+            # intersection (TP: True Positive)
             intersection = torch.sum(true_i * pred_j)
-            # i번째 클래스의 전체 픽셀 수로 나누어 비율 계산
-            ratio = intersection / (total_pixels_per_class + 1e-6)  # 0 나눗셈 방지
+            
+            # 실제 해당 클래스의 전체 픽셀 수
+            total_true_pixels = torch.sum(true_i)
+            
+            # 비율 계산 (TP / Total True)
+            ratio = intersection / (total_true_pixels + 1e-6)
             confusion_matrix[i, j] = ratio.item()
     
+    # 행별로 정규화 (각 행의 합이 1이 되도록)
+    confusion_matrix = confusion_matrix / confusion_matrix.sum(dim=1, keepdim=True).clamp(min=1e-6)
+    
     return confusion_matrix
-
-def calculate_metrics(confusion_matrix):
-    """
-    TODO:
-    Calculate metrics from confusion matrix.
-    """
-    # 각 클래스에 대한 TP, FP, FN 계산
-    TP = confusion_matrix.diag()
-    FP = confusion_matrix.sum(dim=0) - TP
-    FN = confusion_matrix.sum(dim=1) - TP
-
-    # Precision, Recall, F1 Score 계산
-    precision = TP / (TP + FP + 1e-6)  # 0 나눗셈 방지
-    recall = TP / (TP + FN + 1e-6)
-    f1_score = 2 * (precision * recall) / (precision + recall + 1e-6)
-
-    return precision, recall, f1_score
 
 def save_confusion_matrix(confusion_matrix, classes):
 
@@ -136,7 +120,7 @@ def save_confusion_matrix(confusion_matrix, classes):
     # heatmap 시각화
     sns.heatmap(confusion_matrix.cpu().numpy(), 
                 annot=True,
-                fmt='.2f',  # 소수점 3자리까지 표시
+                fmt='.1f',  # 소수점 3자리까지 표시
                 cmap='Blues',
                 xticklabels=classes,
                 yticklabels=classes)

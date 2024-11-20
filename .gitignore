@@ -4,4 +4,3 @@ lightningmodule/lightning_logs/
 lightningmodule/wandb/
 lightningmodule/visualize/
 CVAT/
-*.png

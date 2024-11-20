@@ -40,6 +40,7 @@ class SegmentationModel(LightningModule):
         
         batch_size = len(outputs)
         for i in range(batch_size):
+            # confusion matrix 계산
             batch_conf_matrix = calculate_confusion_matrix(masks[i], outputs[i], num_classes=len(CLASSES), threshold=self.thr)
             self.confusion_matrix += batch_conf_matrix
             
