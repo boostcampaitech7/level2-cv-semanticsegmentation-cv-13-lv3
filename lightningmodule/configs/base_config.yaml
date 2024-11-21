@@ -1,11 +1,11 @@
 checkpoint_dir: ./checkpoints
 checkpoint_file: fcn_resnet50_best_model.pt
-project_name: project4_test_run
+project_name: Aug_test
 
 #----------------------------------#
-run_name: aug_test
+run_name: clip2grid8
 
-architecture: Unet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
+architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
 encoder_name: efficientnet-b0
 encoder_weight: imagenet
 
@@ -14,13 +14,13 @@ seed: 42
 batch_size: 20
 num_workers: 8
 
-lr: 1e-4
+lr: 1e-3
 
 input_size: 512
-max_epoch: 5
+max_epoch: 20
 valid_interval: 5
 clahe: true
-clahe_clip_limit: 2.0
-clahe_tile_grid_size: [8, 8]
+clahe_clip_limit: 4.0
+clahe_tile_grid_size: [4, 4]
 
 amp: True
