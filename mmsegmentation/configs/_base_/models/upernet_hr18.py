@@ -42,7 +42,7 @@ model = dict(
                 num_channels=(18, 36, 72, 144)))),
     decode_head=dict(
         type='UPerHead',
-        in_channels=[128, 256, 512, 1024],
+        in_channels=[256, 512, 1024, 2048],
         in_index=[0, 1, 2, 3],
         pool_scales=(1, 2, 3, 6),
         channels=512,
@@ -54,7 +54,7 @@ model = dict(
             type='CrossEntropyLoss', use_sigmoid=False, loss_weight=1.0)),
     auxiliary_head=dict(
         type='FCNHead',
-        in_channels=384,
+        in_channels=1024,
         in_index=2,
         channels=256,
         num_convs=1,
