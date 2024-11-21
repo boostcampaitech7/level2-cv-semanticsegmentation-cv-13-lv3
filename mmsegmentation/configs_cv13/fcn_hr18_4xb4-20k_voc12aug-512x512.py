@@ -1,5 +1,5 @@
 _base_ = [
-    '../configs/_base_/models/ocrnet_hr18.py', 
+    '../configs/_base_/models/upernet_hr18.py', 
     './schedule_20k.py',
     './dataset.py',
     './runtime.py'
@@ -15,11 +15,7 @@ data_preprocessor = dict(
         size=crop_size)
 model = dict(
     data_preprocessor=data_preprocessor,) 
-    # decode_head=[
-    #     dict(
-    #         num_classes=29,
-    #         loss_decode=dict(use_sigmoid=True)
-    #     )])
+
 
 optim_wrapper = dict(
     type='OptimWrapper',

@@ -46,6 +46,7 @@ model = dict(
             type='FCNHead',
             in_channels=[48, 96, 192, 384],
             channels=sum([48, 96, 192, 384]),
+            threshold=0.5,
             in_index=(0, 1, 2, 3),
             input_transform='resize_concat',
             kernel_size=1,
@@ -53,7 +54,6 @@ model = dict(
             concat_input=False,
             dropout_ratio=-1,
             num_classes=29,
-            threshold=0.5,
             norm_cfg=norm_cfg,
             align_corners=False,
             loss_decode=dict(
@@ -61,6 +61,7 @@ model = dict(
         dict(
             type='OCRHead',
             in_channels=[48, 96, 192, 384],
+            threshold=0.5,
             in_index=(0, 1, 2, 3),
             input_transform='resize_concat',
             channels=512,
@@ -69,7 +70,6 @@ model = dict(
             num_classes=29,
             norm_cfg=norm_cfg,
             align_corners=False,
-            threshold=0.5,
             loss_decode=dict(
                 type='CrossEntropyLoss', use_sigmoid=True, loss_weight=1.0)),
     ],

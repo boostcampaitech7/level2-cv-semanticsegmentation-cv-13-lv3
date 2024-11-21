@@ -3,7 +3,7 @@ checkpoint_file: OCRNet_HRNet.pth
 project_name: HRNet
 
 #----------------------------------#
-run_name: HRNet_OCRNet
+run_name: HRNet_UPerNet
 
 seed: 42
 
@@ -12,16 +12,16 @@ num_workers: 4
 
 lr: 6e-4
 
-input_size: 1024
+input_size: 512
 max_step: 40000
-valid_step: 1000
+valid_step: 40000
 
 amp: True
 
 resume: True
 wandb_id: -1
 
-config: configs_cv13/HRNet.py
+config: configs_cv13/UPerNet_HRNet.py
 
 auto_eval: True
 tta: False

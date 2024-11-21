@@ -83,7 +83,7 @@ def set_yaml_cfg(config, yaml_config):
     config.train_cfg.max_iters=config.max_iters
     config.train_cfg.val_interval=yaml_config.valid_step
 
-    config.default_hooks.checkpoint.interval=yaml_config.valid_step
+    config.default_hooks.checkpoint.interval=5000
     config.default_hooks.checkpoint.out_dir=yaml_config.checkpoint_dir
     config.default_hooks.checkpoint.filename_tmpl=yaml_config.checkpoint_file.rsplit('.', 1)[0] + "_{}.pth"
 
