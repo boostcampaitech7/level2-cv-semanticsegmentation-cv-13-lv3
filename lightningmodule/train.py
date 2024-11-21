@@ -2,7 +2,7 @@
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from xraydataset import XRayDataset, split_data
-from utils.utils import get_sorted_files_by_type, set_seed
+from utils import get_sorted_files_by_type, set_seed, Gsheet_param
 from constants import TRAIN_DATA_DIR
 from argparse import ArgumentParser, Namespace
 import albumentations as A
@@ -13,9 +13,9 @@ from omegaconf import OmegaConf
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
-from utils.Gsheet import Gsheet_param
 from augmentation import load_transforms
 from test import test_model  # 테스트 함수 임포트
+from augmentation import CLAHEAugmentation
 
 class CustomModelCheckpoint(ModelCheckpoint):
     def __init__(self, *args, **kwargs):
@@ -40,16 +40,6 @@ def train_model(args):
     # 체크포인트 경로 설정
     checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}.ckpt")
 
-    if args.resume:
-        # Resume 설정 확인
-        if os.path.exists(checkpoint_path):
-            print(f"Resume : <{checkpoint_path}> 체크포인트에서 학습 재개")
-        else:
-            raise FileNotFoundError(f"Resume : 체크포인트가 존재하지 않음 <{checkpoint_path}>")
-    else:
-        checkpoint_path = None
-        print("No Resume : 새로운 학습 시작")
-
     # WandB 설정
     wandb_logger = WandbLogger(
         project=project_name,
@@ -65,13 +55,14 @@ def train_model(args):
     pngs = get_sorted_files_by_type(image_root, 'png')
     jsons = get_sorted_files_by_type(label_root, 'json')
     train_files, valid_files = split_data(pngs, jsons)
-
+    
     transforms = load_transforms(args)
     train_dataset = XRayDataset(
         image_files=train_files['filenames'],
         label_files=train_files['labelnames'],
         transforms=transforms
     )
+    
     valid_dataset = XRayDataset(
         image_files=valid_files['filenames'],
         label_files=valid_files['labelnames'],
