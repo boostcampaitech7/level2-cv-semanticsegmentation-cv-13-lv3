@@ -2,32 +2,50 @@ import sys
 
 sys.path.append('../lightningmodule')
 
-from omegaconf import OmegaConf
-from utils.utils import get_sorted_files_by_type, encode_mask_to_rle
-from constants import IND2CLASS
+from utils import get_sorted_files_by_type
+from xraydataset import split_data
 
 # Copyright (c) OpenMMLab. All rights reserved.
 import os
 import os.path as osp
 
-from mmengine.config import Config, DictAction
+import numpy as np
+
+from argparse import ArgumentParser
+
+from mmengine.config import Config
 from mmengine.runner import Runner
 
-from tools.test import parse_args, trigger_visualization_hook
+from omegaconf import OmegaConf
 
-import numpy as np
-import pandas as pd
+from tools.test import trigger_visualization_hook
 
-from argparse import Namespace
 
-def set_xraydataset(config):
+def set_xraydataset(args, config):
 
-    TEST_DATA_DIR = 'data/test'
+    image_files = None
 
-    image_root = os.path.join(TEST_DATA_DIR, 'DCM')
-    pngs = get_sorted_files_by_type(image_root, 'png')
+    if args.valid:
+        TRAIN_DATA_DIR = 'data/train'
 
-    config.test_dataloader.dataset.image_files = np.array(pngs)
+        image_root = osp.join(TRAIN_DATA_DIR, 'DCM')
+        label_root = osp.join(TRAIN_DATA_DIR, 'outputs_json')
+
+        pngs = get_sorted_files_by_type(image_root, 'png')
+        jsons = get_sorted_files_by_type(label_root, 'json')
+
+        _, valid_files = split_data(pngs, jsons)
+
+        image_files = valid_files['filenames']
+    else:
+        TEST_DATA_DIR = 'data/test'
+
+        image_root = osp.join(TEST_DATA_DIR, 'DCM')
+        pngs = get_sorted_files_by_type(image_root, 'png')
+
+        image_files = np.array(pngs)
+
+    config.test_dataloader.dataset.image_files = image_files
     config.test_dataloader.dataset.label_files = None
 
     return config
@@ -41,7 +59,7 @@ def set_yaml_config_test(config, yaml_config):
         config.tta_model.module = config.model
         config.model = config.tta_model
 
-    ckpt_filepath = os.path.join(yaml_config.checkpoint_dir, cfg_name, yaml_config.checkpoint_file.rsplit('.', 1)[0] + '.pth')
+    ckpt_filepath = osp.join(yaml_config.checkpoint_dir, cfg_name, yaml_config.checkpoint_file.rsplit('.', 1)[0] + '.pth')
     config.load_from = ckpt_filepath
     
     return config
@@ -51,14 +69,14 @@ def disable_wandb(config):
     config.visualizer = dict(type='SegLocalVisualizer', vis_backends=config.vis_backends, name='visualizer')
     return config
 
-def test(yaml_cfg):
+def test(args, yaml_cfg):
 
     cfg_name = osp.splitext(osp.basename(yaml_cfg.config))[0]
     # load config
     cfg = Config.fromfile(yaml_cfg.config)
     cfg = set_yaml_config_test(cfg, yaml_cfg)
     cfg = disable_wandb(cfg)
-    cfg = set_xraydataset(cfg)
+    cfg = set_xraydataset(args, cfg)
 
     cfg.launcher = 'none'
 
@@ -70,8 +88,6 @@ def test(yaml_cfg):
     #     cfg = trigger_visualization_hook(cfg, args)
 
     # add output_dir in metric
-    cfg.test_evaluator['keep_results'] = True
-
     cfg.resume = False
     
     # build the runner from config
@@ -80,7 +96,12 @@ def test(yaml_cfg):
     runner.test()
 
 if __name__ == '__main__':
-    yaml_config_path = './configs_cv13/base_config.yaml'
-    with open(yaml_config_path, 'r') as f:
+
+    parser = ArgumentParser()
+    parser.add_argument("--config", type=str, default="configs_cv13/base_config.yaml")
+    parser.add_argument("--valid", action="store_true")
+    args = parser.parse_args()
+
+    with open(args.config, 'r') as f:
         cfg = OmegaConf.load(f)  
-    test(cfg)
+    test(args, cfg)

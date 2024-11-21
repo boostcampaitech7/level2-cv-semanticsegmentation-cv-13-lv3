@@ -2,30 +2,30 @@ import sys
 
 sys.path.append('../lightningmodule')
 
-from omegaconf import OmegaConf
-from utils.Gsheet import Gsheet_param
-from utils.utils import get_sorted_files_by_type, set_seed
+from utils import get_sorted_files_by_type, set_seed, Gsheet_param
 from xraydataset import split_data
 
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
-import os
 import os.path as osp
 
-from mmengine.config import Config, DictAction
+from omegaconf import OmegaConf
+from mmengine.config import Config
 from mmengine.logging import print_log
 from mmengine.runner import Runner
 
 from mmseg.registry import RUNNERS
 
+from argparse import ArgumentParser
+
 from tools.train import parse_args
-from test import test
+from test import test, disable_wandb
 
 def set_xraydataset(config):
     TRAIN_DATA_DIR = 'data/train'
 
-    image_root = os.path.join(TRAIN_DATA_DIR, 'DCM')
-    label_root = os.path.join(TRAIN_DATA_DIR, 'outputs_json')
+    image_root = osp.join(TRAIN_DATA_DIR, 'DCM')
+    label_root = osp.join(TRAIN_DATA_DIR, 'outputs_json')
 
     pngs = get_sorted_files_by_type(image_root, 'png')
     jsons = get_sorted_files_by_type(label_root, 'json')
@@ -89,11 +89,13 @@ def set_yaml_cfg(config, yaml_config):
 
     return config
 
-def train(yaml_cfg):
+def train(args, yaml_cfg):
     # load config
     cfg = Config.fromfile(yaml_cfg.config)
 
     cfg = set_yaml_cfg(cfg, yaml_cfg)
+    if args.nowandb:
+        cfg = disable_wandb(cfg)
     cfg = set_xraydataset(cfg)
 
     cfg.launcher = 'none'
@@ -117,10 +119,15 @@ def train(yaml_cfg):
 
 
 if __name__ == '__main__':
-    yaml_config_path = './configs_cv13/base_config.yaml'
-    with open(yaml_config_path, 'r') as f:
+
+    parser = ArgumentParser()
+    parser.add_argument("--config", type=str, default="configs_cv13/base_config.yaml")
+    parser.add_argument("--nowandb", action="store_true")
+    args = parser.parse_args()
+
+    with open(args.config, 'r') as f:
         cfg = OmegaConf.load(f)  
-    train(cfg)
+    train(args, cfg)
     Gsheet_param(cfg)
 
     # if cfg.auto_eval is True:
