@@ -1,6 +1,6 @@
 checkpoint_dir: ./checkpoints/UPerNet/efficient
 checkpoint_file: upernet_efficientnet-b7-bestEp_19
-project_name: Reproduce attempt
+project_name: Aug_test
 
 #----------------------------------#
 run_name: loader test 3
@@ -16,7 +16,7 @@ num_workers: 8
 
 lr: 1e-4
 
-input_size: 2048
+input_size: 512
 max_epoch: 20
 valid_interval: 5
 clahe: False
