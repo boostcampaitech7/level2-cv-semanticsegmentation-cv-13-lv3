@@ -1,5 +1,6 @@
 checkpoint_dir: ./checkpoints
 checkpoint_file: fcn_resnet50_best_model.pt
+resume_checkpoint_suffix: -latest  # Resume 전용 체크포인트 접미사: -latest, -bestEp_00, None, ...
 project_name: project4_test_run
 
 #----------------------------------#
