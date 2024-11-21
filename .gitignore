@@ -5,7 +5,6 @@ wandb/
 visualize/
 CVAT/
 /SAM2-UNet/pretrained/
-
 # Generated and compiled files
 *.pyc
 *.o

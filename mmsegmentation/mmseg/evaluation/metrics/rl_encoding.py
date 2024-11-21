@@ -1,11 +1,16 @@
 import os
 import numpy as np
 
+import pandas as pd
+
 from torch import Tensor
 from typing import Any, Sequence
 from mmseg.registry import METRICS
 from mmengine.evaluator import BaseMetric 
 from mmengine.structures import BaseDataElement
+
+import torch
+import torch.nn.functional as F
 
 def _to_cpu(data: Any) -> Any:
     """transfer all tensors and BaseDataElement to cpu."""
@@ -38,11 +43,16 @@ class RLEncoding(BaseMetric):
     IND2CLASS = {v: k for k, v in CLASS2IND.items()}
 
     def __init__(self,
+                 threshold=0.5,
                  collect_device='cpu',
                  prefix=None,
                  **kwargs):
+        
         self.rles = []
-        self.filename_and_class = []
+        self.filenames = []
+        self.classes = []
+        self.threshold = threshold
+
         super().__init__(collect_device=collect_device, prefix=prefix)
 
     @staticmethod
@@ -61,25 +71,38 @@ class RLEncoding(BaseMetric):
 
     def process(self, data_batch, data_samples: Sequence[dict]) -> None:
 
-        for data_sample in data_samples:
-            # Retrieve metadata
-            image_path = data_sample['img_path']
-            image_name = os.path.basename(image_path)
+        # 1. 메타데이터 추출
+        image_names = [os.path.basename(sample['img_path']) for sample in data_samples]
 
-            # Retrieve prediction
-            pred_mask = data_sample['pred_sem_seg']['data'].cpu().numpy()  # (C, H, W)
-            pred_mask = (pred_mask > 0.5).astype(np.uint8)  # Apply thresholding
-            
+        # 2. 모든 예측 데이터(`pred_sem_seg`)를 추출하여 배치로 결합
+        pred_masks = torch.stack([data_sample['pred_sem_seg']['data'] for data_sample in data_samples])  # (N, C, H, W)
+
+        # 3. 크기 보정 및 후처리
+        pred_masks = F.interpolate(pred_masks, size=(2048, 2048), mode="bilinear", align_corners=False)  # 크기 보정
+        pred_masks = torch.sigmoid(pred_masks)  # 확률값으로 변환
+        pred_masks = (pred_masks > self.threshold).detach().cpu().numpy()  # Threshold 적용 후 NumPy 변환 (N, C, 2048, 2048)
+
+        for pred_mask, image_name in zip(pred_masks, image_names):  # 배치 내 각 샘플에 대해 처리
             # Process each class mask
             for class_idx, mask in enumerate(pred_mask):
-                    rle = self._encode_mask_to_rle(mask)
-                    self.rles.append(rle)
-                    self.filename_and_class.append(f"{self.IND2CLASS[class_idx]}_{image_name}")
+                rle = self._encode_mask_to_rle(mask)
+                self.rles.append(rle)
+                self.classes.append(f"{self.IND2CLASS[class_idx]}")
+                self.filenames.append(f"{image_name}")
 
         self.results = []
 
     def compute_metrics(self, results) -> dict:
+        
+        self.inference(self.rles, self.filenames, self.classes)
         return {}
     
-    def get_results(self):
-        return self.rles, self.filename_and_class
+    def inference(self, rles, filenames, classes):
+
+        df = pd.DataFrame({
+                "image_name": filenames,
+                "class": classes,
+                "rle": rles,
+            })
+        df.to_csv("output.csv", index=False)
+        print("Test results saved to output.csv")

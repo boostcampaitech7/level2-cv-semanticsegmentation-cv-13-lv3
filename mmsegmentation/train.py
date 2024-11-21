@@ -2,32 +2,30 @@ import sys
 
 sys.path.append('../lightningmodule')
 
-from omegaconf import OmegaConf
-from utils.Gsheet import Gsheet_param
-from utils.utils import get_sorted_files_by_type, set_seed
+from utils import get_sorted_files_by_type, set_seed, Gsheet_param
 from xraydataset import split_data
-
-sys.path.append('../mmseg/')
 
 # Copyright (c) OpenMMLab. All rights reserved.
 import logging
-import os
 import os.path as osp
 
-from mmengine.config import Config, DictAction
+from omegaconf import OmegaConf
+from mmengine.config import Config
 from mmengine.logging import print_log
 from mmengine.runner import Runner
 
 from mmseg.registry import RUNNERS
 
+from argparse import ArgumentParser
+
 from tools.train import parse_args
-from test import test
+from test import test, disable_wandb
 
 def set_xraydataset(config):
     TRAIN_DATA_DIR = 'data/train'
 
-    image_root = os.path.join(TRAIN_DATA_DIR, 'DCM')
-    label_root = os.path.join(TRAIN_DATA_DIR, 'outputs_json')
+    image_root = osp.join(TRAIN_DATA_DIR, 'DCM')
+    label_root = osp.join(TRAIN_DATA_DIR, 'outputs_json')
 
     pngs = get_sorted_files_by_type(image_root, 'png')
     jsons = get_sorted_files_by_type(label_root, 'json')
@@ -87,32 +85,25 @@ def set_yaml_cfg(config, yaml_config):
 
     config.default_hooks.checkpoint.interval=yaml_config.valid_step
     config.default_hooks.checkpoint.out_dir=yaml_config.checkpoint_dir
-    config.default_hooks.checkpoint.filename_tmpl=osp.basename(yaml_config.checkpoint_file)[0] + "_iter_{}.pth"
+    config.default_hooks.checkpoint.filename_tmpl=yaml_config.checkpoint_file.rsplit('.', 1)[0] + "_{}.pth"
 
     return config
 
-def train(yaml_cfg):
-    args = parse_args()
-
+def train(args, yaml_cfg):
     # load config
-    cfg = Config.fromfile(args.config)
+    cfg = Config.fromfile(yaml_cfg.config)
 
     cfg = set_yaml_cfg(cfg, yaml_cfg)
+    if args.nowandb:
+        cfg = disable_wandb(cfg)
     cfg = set_xraydataset(cfg)
 
-    cfg.launcher = args.launcher
+    cfg.launcher = 'none'
 
-    # work_dir is determined in this priority: CLI > segment in file > filename
-    if args.work_dir is not None:
-        # update configs according to CLI args if args.work_dir is not None
-        cfg.work_dir = args.work_dir
-    elif cfg.get('work_dir', None) is None:
+    if cfg.get('work_dir', None) is None:
         # use config filename as default work_dir if cfg.work_dir is None
         cfg.work_dir = osp.join('./work_dirs',
-                                osp.splitext(osp.basename(args.config))[0])
-
-    # resume training
-    #cfg.resume = args.resume
+                                osp.splitext(osp.basename(yaml_cfg.config))[0])
 
     # build the runner from config
     if 'runner_type' not in cfg:
@@ -128,10 +119,15 @@ def train(yaml_cfg):
 
 
 if __name__ == '__main__':
-    yaml_config_path = './configs_cv13/base_config.yaml'
-    with open(yaml_config_path, 'r') as f:
+
+    parser = ArgumentParser()
+    parser.add_argument("--config", type=str, default="configs_cv13/base_config.yaml")
+    parser.add_argument("--nowandb", action="store_true")
+    args = parser.parse_args()
+
+    with open(args.config, 'r') as f:
         cfg = OmegaConf.load(f)  
-    train(cfg)
+    train(args, cfg)
     Gsheet_param(cfg)
 
     # if cfg.auto_eval is True:
