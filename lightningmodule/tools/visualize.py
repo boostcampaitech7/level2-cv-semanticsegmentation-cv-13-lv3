@@ -167,7 +167,7 @@ def visualize_compare(visual_loader, mask_dict):
                 wandb.log({"Pred Mask":masked_image_pred})
                 wandb.log({"Mask Compare":masked_image_cmp})
 
-def visual_dataset(visual_loader, augmentation=False, img_num=800):
+def visual_dataset(visual_loader, augmentation=False):
     save_dir = 'visualize/'
 
     if os.path.exists(save_dir):  
@@ -175,7 +175,10 @@ def visual_dataset(visual_loader, augmentation=False, img_num=800):
 
     os.makedirs(save_dir, exist_ok=True)    
 
-    
+    img_num = 800
+    if augmentation:
+        img_num = 1
+        
     for idx, (image_names, images, labels) in enumerate(visual_loader):
         if idx >= img_num:
             break
@@ -221,6 +224,7 @@ if __name__ == '__main__':
 
     transforms = A.Resize(args.input_size, args.input_size)
     if args.augmentation:
+        print("Augmentation Visualize")
         with open(args.config, 'r') as f:
             cfg = OmegaConf.load(f)
         transforms = load_transforms(cfg)
