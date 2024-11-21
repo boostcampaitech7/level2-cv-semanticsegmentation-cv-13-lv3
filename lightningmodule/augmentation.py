@@ -90,10 +90,10 @@ def load_transforms(args):
         A.Resize(args.input_size, args.input_size),
         # ColorJitter를 사용하려면 ToFloat 사용해야됨
         # A.ToFloat(max_value=255),
-        # A.ColorJitter(brightness=(1.1, 1.1), contrast=(1.4, 1.4), saturation=0, hue=0, p=1.0),
+        # A.ColorJitter(brightness=(1.0, 1.1), contrast=(1.0, 1.4), saturation=0, hue=0, p=1.0),
         # ColorJitterAugmentation(brightness=0.1, contrast=0.4, p=1.0),
-        # EdgeDetection(threshold1=100, threshold2=250, p=1.0),
-        # A.HorizontalFlip(p=1.0),
+        # EdgeDetection(threshold1=50, threshold2=100, p=1.0),
+        # A.HorizontalFlip(p=0.5),
     ]
     
     if args.clahe:
