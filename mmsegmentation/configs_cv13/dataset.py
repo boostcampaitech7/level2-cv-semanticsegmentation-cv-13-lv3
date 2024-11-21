@@ -18,6 +18,7 @@ valid_pipeline = [
 
 test_pipeline = [
             dict(type='LoadImageFromFile'),
+            dict(type='Resize', scale=(512, 512)),
             dict(type='PackSegInputs')
         ]
 
@@ -43,8 +44,8 @@ val_dataloader = dict(
         pipeline=valid_pipeline))
 
 test_dataloader = dict(
-    batch_size=2,
-    num_workers=2,
+    batch_size=8,
+    num_workers=8,
     sampler=dict(type='DefaultSampler', shuffle=False),
     dataset=dict(
         type=dataset_type,
