@@ -22,11 +22,35 @@ class EqualizeHistAugmentation:
 
         return cv2.cvtColor(equalized, cv2.COLOR_GRAY2BGR)
 
+class ColorJitterAugmentation(A.ImageOnlyTransform):
+    def __init__(self, brightness=0.05, contrast=0.2, p=1.0):
+        super().__init__(always_apply=False, p=p)
+        self.brightness = brightness
+        self.contrast = contrast
+        
+    def apply(self, image, **kwargs):
+        # image는 이미 float64이고 [0,1] 범위라고 가정
+        
+        # Convert to uint8 for cv2
+        image_uint8 = (image * 255).astype(np.uint8)
+        
+        
+        # Brightness adjustment
+        beta = int(255 * self.brightness)
+        # Contrast adjustment
+        contrast_factor = 1 + self.contrast
+        
+        image_uint8 = cv2.convertScaleAbs(image_uint8, alpha=contrast_factor, beta=beta)
+        
+        # Convert back to float64 [0,1] range
+        image = image_uint8.astype(np.float64) / 255.0
+        
+        return image
+
 def load_transforms(args):
     transform = [
+        ColorJitterAugmentation(brightness=0.1, contrast=0.4, p=1.0),
         A.Resize(args.input_size, args.input_size),
-        # A.CLAHE(clip_limit=(1, 4), tile_grid_size=(8, 8), p=1.0)
-        # A.ColorJitter(brightness=0.1, contrast=0.4, saturation=0.005, hue=0.005, p=1.0)
     ]
     
     if args.clahe:

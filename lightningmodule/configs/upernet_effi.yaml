@@ -1,9 +1,9 @@
 checkpoint_dir: ./checkpoints/UPerNet/efficient
 checkpoint_file: upernet_efficientnet-b7-bestEp_19
-project_name: UPerNet
+project_name: Reproduce attempt
 
 #----------------------------------#
-run_name: efficientnet-b7
+run_name: loader test 3
 
 architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
 encoder_name: efficientnet-b7
@@ -16,9 +16,12 @@ num_workers: 8
 
 lr: 1e-4
 
-input_size: 512
+input_size: 2048
 max_epoch: 20
-valid_interval: 1
+valid_interval: 5
+clahe: False
+clahe_clip_limit: 2.0
+clahe_tile_grid_size: [8, 8]
 
 amp: True
 
