@@ -71,8 +71,8 @@ class EdgeDetection(A.ImageOnlyTransform):
 
 def load_transforms(args):
     transform = [
+        A.RandomScale(scale_limit=(0.9, 1.1), p=1.0),
         A.Resize(args.input_size, args.input_size),
-        A.Scale(scale_limit=(0.8, 1.2), p=1.0),
         # ColorJitter를 사용하려면 ToFloat 사용해야됨
         # A.ToFloat(max_value=255),
         # A.ColorJitter(brightness=(1.1, 1.1), contrast=(1.4, 1.4), saturation=0, hue=0, p=1.0),
