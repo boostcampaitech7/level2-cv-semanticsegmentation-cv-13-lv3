@@ -4,6 +4,15 @@ lightning_logs/
 wandb/
 visualize/
 CVAT/
+<<<<<<< HEAD
+=======
+__pycache__/
+checkpoints/
+lightning_logs/
+wandb/
+visualize/
+CVAT/
+>>>>>>> main
 # Generated and compiled files
 *.pyc
 *.o
@@ -65,4 +74,8 @@ artifacts/
 saved_models/
 reference/
 pths/
+<<<<<<< HEAD
 Segmentation/
+=======
+Segmentation/
+>>>>>>> main
