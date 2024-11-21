@@ -1,5 +1,5 @@
 checkpoint_dir: ./checkpoints/UPerNet/efficient
-checkpoint_file: upernet_efficientnet-b7-bestEp_19
+checkpoint_file: scale_normal
 project_name: Aug_test
 
 #----------------------------------#

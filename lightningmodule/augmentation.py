@@ -75,9 +75,10 @@ def load_transforms(args):
         A.Resize(args.input_size, args.input_size),
         # ColorJitter를 사용하려면 ToFloat 사용해야됨
         # A.ToFloat(max_value=255),
-        # A.ColorJitter(brightness=(1.1, 1.1), contrast=(1.4, 1.4), saturation=0, hue=0, p=1.0),
+        # A.ColorJitter(brightness=(1.0, 1.1), contrast=(1.0, 1.4), saturation=0, hue=0, p=1.0),
         # ColorJitterAugmentation(brightness=0.1, contrast=0.4, p=1.0),
         # EdgeDetection(threshold1=50, threshold2=100, p=1.0),
+        # A.HorizontalFlip(p=0.5),
     ]
     
     if args.clahe:
@@ -87,7 +88,7 @@ def load_transforms(args):
         clahe_aug = CLAHEAugmentation(clip_limit=clahe_clip_limit, tile_grid_size=clahe_tile_grid_size)
         transform.append(clahe_aug.albumentations_clahe())
         
-    # transform.append(A.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225])) # ImageNet Default 정규화
-    transform.append(A.Normalize(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5])) 
+    transform.append(A.Normalize(normalization='min_max', p=1.0))
+    # A.Normalize(normalization='robust', p=1.0), # Percentile Normalization : 매우 밝거나 어두운 영역을 좀 무시하고 정규화
     transform = A.Compose(transform)
     return transform
