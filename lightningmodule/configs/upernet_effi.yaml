@@ -1,9 +1,9 @@
-checkpoint_dir: ./checkpoints/UPerNet/efficient
-checkpoint_file: scale_normal
+checkpoint_dir: ./checkpoints/UPerNet/efficient/cos
+checkpoint_file: base_cos-bestEp_28
 project_name: Aug_test
 
 #----------------------------------#
-run_name: RandomScale & Normalize
+run_name: Base_cos_30
 
 architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
 encoder_name: efficientnet-b7
@@ -14,10 +14,10 @@ seed: 42
 batch_size: 4
 num_workers: 8
 
-lr: 1e-4
+lr: 1e-3
 
 input_size: 512
-max_epoch: 20
+max_epoch: 30
 valid_interval: 5
 clahe: False
 clahe_clip_limit: 2.0
