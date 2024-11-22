@@ -1,9 +1,3 @@
-__pycache__/
-checkpoints/
-lightning_logs/
-wandb/
-visualize/
-CVAT/
 <<<<<<< HEAD
 =======
 __pycache__/
