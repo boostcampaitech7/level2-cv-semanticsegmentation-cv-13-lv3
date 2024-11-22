@@ -34,7 +34,6 @@ def convert_data_to_coco_format(
     annotations = []
     categories = []
     
-    # 1 to 29
     for k, v in CLASS2IND.items():
         categories.append({
             "id": v,
@@ -43,11 +42,6 @@ def convert_data_to_coco_format(
     
     annot_idx = 0
     for img_idx, (img_path, json_path) in tqdm(enumerate(zip(img_paths, json_paths))):
-        # image와 json name이 잘 mapping 되는지 확인
-        # img_path = img_path.replace("\\", "/").split("/")[-1].replace(".png", "")
-        # json_path = json_path.replace("\\", "/").split("/")[-1].replace(".json", "")
-        # assert img_path == json_path, f"{img_path} != {json_path}"
-        
         pil_img = Image.open(img_path)
         width, height = pil_img.size
         file_name = img_path.replace("\\", "/").split(f"{method}/")[-1]
@@ -68,8 +62,7 @@ def convert_data_to_coco_format(
             annotation["id"] = annot_idx
             annotation["image_id"] = img_idx
             annotation["category_id"] = CLASS2IND[annot["label"]]
-            
-            # get polygon points
+
             points = annot["points"]
             min_x, min_y = min(points, key=lambda x: x[0])[0], min(points, key=lambda x: x[1])[1]
             max_x, max_y = max(points, key=lambda x: x[0])[0], max(points, key=lambda x: x[1])[1]

@@ -1,13 +1,13 @@
 import os
-import json
-import shutil
-
+import cv2
 import yaml
-import numpy as np
+import wandb
 from glob import glob
-from PIL import Image
 from tqdm import tqdm
-from sklearn.model_selection import GroupKFold
+from ultralytics import YOLO
+import numpy as np
+import pandas as pd
+import albumentations as A
 
 
 CLASSES = [
@@ -18,161 +18,108 @@ CLASSES = [
     'Trapezoid', 'Capitate', 'Hamate', 'Scaphoid', 'Lunate',
     'Triquetrum', 'Pisiform', 'Radius', 'Ulna',
 ]
-CLASS2IND = {v: i+1 for i, v in enumerate(CLASSES)}
+CLASS2IND = {v: i for i, v in enumerate(CLASSES)}
+IND2CLASS = {v: k for k, v in CLASS2IND.items()}
 
 
-def convert_data_to_coco_format(
-    root_path: str,
-    method: str,
-):
-    print("Starting convert data to coco format")
-    img_paths = sorted(glob(os.path.join(root_path, method, "*", "*", "*.png")))
-    json_paths = sorted(glob(os.path.join(root_path, method, "*", "*", "*.json")))
-    
-    coco_json = {}
-    images = []
-    annotations = []
-    categories = []
-    
-    # 1 to 29
-    for k, v in CLASS2IND.items():
-        categories.append({
-            "id": v,
-            "name": k
-        })
-    
-    annot_idx = 0
-    for img_idx, (img_path, json_path) in tqdm(enumerate(zip(img_paths, json_paths))):
-        pil_img = Image.open(img_path)
-        width, height = pil_img.size
-        file_name = img_path.replace("\\", "/").split(f"{method}/")[-1]
-        
-        image = {
-            "id": img_idx,
-            "file_name": file_name,
-            "height": width,
-            "width": height,
-        }
-        images.append(image)
-        
-        with open(json_path, 'r') as f:
-            annot_data = json.load(f)
-        
-        for annot in annot_data["annotations"]:
-            annotation = {}
-            annotation["id"] = annot_idx
-            annotation["image_id"] = img_idx
-            annotation["category_id"] = CLASS2IND[annot["label"]]
-            
-            # get polygon points
-            points = annot["points"]
-            min_x, min_y = min(points, key=lambda x: x[0])[0], min(points, key=lambda x: x[1])[1]
-            max_x, max_y = max(points, key=lambda x: x[0])[0], max(points, key=lambda x: x[1])[1]
-            w, h = max_x - min_x, max_y - min_y
-            
-            bbox = [min_x, min_y, w, h]
-            area = w * h
-            points = [p for point in points for p in point]
-            iscrowd = 0
-            
-            annotation["bbox"] = bbox
-            annotation["area"] = area
-            annotation["segmentation"] = [points]
-            annotation["iscrowd"] = iscrowd
-            annotations.append(annotation)
-            annot_idx += 1
-            
-    print("Finish convert data to coco format")
+def encode_mask_to_rle(mask):
+    '''
+    mask: numpy array binary mask 
+    1 - mask 
+    0 - background
+    Returns encoded run length 
+    '''
+    pixels = mask.flatten()
+    pixels = np.concatenate([[0], pixels, [0]])
+    runs = np.where(pixels[1:] != pixels[:-1])[0] + 1
+    runs[1::2] -= runs[::2]
+    return ' '.join(str(x) for x in runs)
 
-    coco_json["images"] = images
-    coco_json["annotations"] = annotations
-    coco_json["categories"] = categories
-    with open(f"{root_path}/{method}_raw.json", "w") as f:
-        json.dump(coco_json, f, indent=4)
-    
-    
-def yolo_to_coco(root_path: str, method: str, json_path: str):       
-    print("Starting convert yolo to coco format")
-    try:
-        os.makedirs(f"{root_path}/yolo_train/images")
-        os.makedirs(f"{root_path}/yolo_train/labels")
-        os.makedirs(f"{root_path}/yolo_valid/images")
-        os.makedirs(f"{root_path}/yolo_valid/labels")
-    except FileExistsError:
-        shutil.rmtree(f"{root_path}/yolo_train")
-        shutil.rmtree(f"{root_path}/yolo_valid")
-        os.makedirs(f"{root_path}/yolo_train/images")
-        os.makedirs(f"{root_path}/yolo_train/labels")
-        os.makedirs(f"{root_path}/yolo_valid/images")
-        os.makedirs(f"{root_path}/yolo_valid/labels")
-        
-    IMAGE_ROOT = os.path.join(root_path, method, "DCM")
-    pngs = {
-        os.path.relpath(os.path.join(root, fname), start=IMAGE_ROOT)
-        for root, _dirs, files in os.walk(IMAGE_ROOT)
-        for fname in files
-        if os.path.splitext(fname)[1].lower() == ".png"
-    }
-    
-    _filenames = np.array(sorted(pngs))
-    groups = [os.path.dirname(fname) for fname in _filenames]
-    ys = [0 for fname in _filenames]
-    gkf = GroupKFold(n_splits=5)
-    
-    train = []
-    valid = []
-    
-    for i, (x, y) in enumerate(gkf.split(_filenames, ys, groups)):
-        if i == 0:
-            valid += list(_filenames[y])
-        else:
-            train += list(_filenames[y])
-            
-    with open(json_path, 'r') as f:
-        json_data = json.load(f)
-        
-    images = json_data["images"]
-    annotations = json_data["annotations"]
-    
-    for _, image in tqdm(enumerate(images)):
-        img_id = image["id"]
-        width, height = image["width"], image["height"]
-        file_name = image["file_name"]
-        
-        check = file_name.split("DCM/")[-1] in train  
-        folder_name = "yolo_train" if check else "yolo_valid"
-        new_file_name = file_name.split("/")[-1] 
-        new_label_name = new_file_name.replace(".png", ".txt")  
-        
-        shutil.copy(
-            os.path.join(root_path, method, file_name),
-            os.path.join(root_path, folder_name, "images", new_file_name)
-        )
-        
-        # copy json
-        candits = [annot for annot in annotations if annot["image_id"] == img_id]
-        for candit in candits:
-            cls_id = candit["category_id"]
-            seg = candit["segmentation"][0]
-            scaled_seg = []
-            for i in range(0, len(seg), 2):
-                x, y = seg[i], seg[i+1]
-                scaled_seg.append(round(x / width, 6))
-                scaled_seg.append(round(y / height, 6))
-            
-            with open(os.path.join(root_path, folder_name, "labels", new_label_name), "a") as f:
-                f.write(f"{cls_id-1} {' '.join(map(str, scaled_seg))}\n")
-                
-    print("Finish convert yolo to coco format")
-    print("Train images: ", len(glob(f"{root_path}/yolo_train/images/*")))
-    print("Train labels: ", len(glob(f"{root_path}/yolo_train/labels/*")))
-    print("Valid images: ", len(glob(f"{root_path}/yolo_valid/images/*")))
-    print("Valid labels: ", len(glob(f"{root_path}/yolo_valid/labels/*")))
-    
 
+def train(data_config_path: str):   
+    with open(data_config_path, 'r') as file:
+        data_config = yaml.safe_load(file)
+        
+    wandb_option = data_config["wandb_option"]
+    wandb.init(
+        project=wandb_option["project"],
+        entity=wandb_option["entity"],
+        name=wandb_option["name"],
+    )
+    
+    train_option = data_config["train_option"]
+    custom_augment = A.Compose([
+         A.CLAHE(p=0.5),
+    #     A.Resize(train_option["imgsz"], train_option["imgsz"]),
+    #     A.Rotate(limit=30, p=0.5),
+    ])
+    model = YOLO("yolo11x-seg.pt")
+    
+    model.train(
+        data=data_config_path,
+        epochs=train_option["epochs"],
+        imgsz=train_option["imgsz"],
+        device=train_option["device"],
+        batch=train_option["batch"],
+        workers=train_option["workers"],
+        cos_lr=train_option["cos_lr"],
+        optimizer=train_option["optimizer"],
+    )
+
+def inference():
+    model = YOLO(f"runs/segment/train/weights/best.pt").cuda()
+    infer_images = sorted(glob("/data/ephemeral/home/data/test/*/*/*.png"))
+    
+    rles = []
+    filename_and_class = []
+
+    for idx, infer_image in tqdm(enumerate(infer_images)):
+        result = model.predict(infer_image, imgsz=2048)[0]
+        boxes = result.boxes.data.cpu().numpy()
+        scores, classes = boxes[:, 4].tolist(), boxes[:, 5].astype(np.uint8).tolist()
+        masks = result.masks.xy
+        
+        datas = [[a, b, c] for a, b, c, in zip(classes, scores, masks)]
+        datas = sorted(datas, key=lambda x: (x[0], -x[1]))
+        img_name = infer_image.split("/")[-1]
+        
+        is_checked = [False] * 29
+        csv_idx, data_idx = 0, 0
+        while data_idx < len(datas):
+            c, s, mask_pts = datas[data_idx]
+            if is_checked[c]:
+                data_idx += 1
+                continue
+            
+            empty_mask = np.zeros((2048, 2048), dtype=np.uint8)
+            if c == csv_idx:
+                is_checked[c] = True
+                pts = [[int(x[0]), int(x[1])] for x in mask_pts]
+                cv2.fillPoly(empty_mask, [np.array(pts)], 1)
+                rle = encode_mask_to_rle(empty_mask)
+                rles.append(rle)
+                filename_and_class.append(f"{IND2CLASS[c]}_{img_name}")
+                data_idx += 1
+            else:
+                rle = encode_mask_to_rle(empty_mask)
+                rles.append(rle)
+                filename_and_class.append(f"{IND2CLASS[csv_idx]}_{img_name}")
+            csv_idx += 1
+            
+    classes, filename = zip(*[x.split("_") for x in filename_and_class])
+    image_name = [os.path.basename(f) for f in filename]
+    df = pd.DataFrame({
+        "image_name": image_name,
+        "class": classes,
+        "rle": rles,
+    })
+
+    if not os.path.exists('./result'):                                                           
+        os.makedirs('./result')
+    f_name = 'yolo_seg_2048_output.csv'
+    df.to_csv(os.path.join('result', f_name), index=False)
+        
+    
 if __name__ == '__main__':
-    with open('../cfg/data.yaml', 'r') as file:
-        config = yaml.safe_load(file)
-    root_path = config['DATA_ROOT']
-    convert_data_to_coco_format(root_path, "train")
-    yolo_to_coco(root_path, "train", f"{root_path}/train_raw.json")
+    train('/data/ephemeral/home/bohyun/ultralytics/cfg/data.yaml')
+    inference()
