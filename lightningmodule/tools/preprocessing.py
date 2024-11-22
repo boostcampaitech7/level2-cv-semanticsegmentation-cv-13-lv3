@@ -93,8 +93,8 @@ def pad_if_needed(img, json_data, output_size=512):
 if __name__ == '__main__':
     # train 경로: 문자열에 train이 있어야함
     # 상대경로는 실행시키는 터미널의 위치 기준
-    train_path = '../data/train'
-    folder_name = 'hobbang'
+    train_path = '/data/ephemeral/home/from_CVAT/train'
+    folder_name = 'cut_background'
 
     png_path = get_sorted_files_by_type(train_path, 'png')
     json_path = get_sorted_files_by_type(train_path, 'json')
