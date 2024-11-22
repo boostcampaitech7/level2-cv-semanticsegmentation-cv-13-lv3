@@ -1,5 +1,0 @@
-__pycache__/
-checkpoints/
-lightning_logs/
-wandb/
-visualize/
