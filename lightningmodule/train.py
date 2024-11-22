@@ -15,6 +15,7 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from test import test_model  # 테스트 함수 임포트
 from augmentation import CLAHEAugmentation
+from loss import calc_loss
 
 class CustomModelCheckpoint(ModelCheckpoint):
     def __init__(self, *args, **kwargs):
@@ -95,7 +96,7 @@ def train_model(args):
     )
 
     # 모델 및 Trainer 설정
-    criterion = nn.BCEWithLogitsLoss()
+    criterion = calc_loss()
     seg_model = SegmentationModel(
         criterion=criterion,
         learning_rate=args.lr,
