@@ -4,6 +4,7 @@ import yaml
 import wandb
 from glob import glob
 from tqdm import tqdm
+from wandb.integration.ultralytics import add_wandb_callback
 from ultralytics import YOLO
 import numpy as np
 import pandas as pd
@@ -55,6 +56,8 @@ def train(data_config_path: str):
     ])
     model = YOLO("yolo11x-seg.pt")
     
+    add_wandb_callback(model, enable_model_checkpointing=True)
+    
     model.train(
         data=data_config_path,
         epochs=train_option["epochs"],
@@ -65,6 +68,9 @@ def train(data_config_path: str):
         cos_lr=train_option["cos_lr"],
         optimizer=train_option["optimizer"],
     )
+    
+    wandb.finish()
+
 
 def inference():
     model = YOLO(f"runs/segment/train/weights/best.pt").cuda()
@@ -122,4 +128,4 @@ def inference():
     
 if __name__ == '__main__':
     train('/data/ephemeral/home/bohyun/ultralytics/cfg/data.yaml')
-    inference()
+    # inference()
