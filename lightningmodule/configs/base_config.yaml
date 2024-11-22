@@ -16,8 +16,11 @@ num_workers: 4
 
 lr: 1e-3
 
-input_size: 1024
-max_epoch: 100
-valid_interval: 10
+input_size: 512
+max_epoch: 5
+valid_interval: 5
+clahe: true
+clahe_clip_limit: 2.0
+clahe_tile_grid_size: [8, 8]
 
 amp: True

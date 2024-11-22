@@ -1,12 +1,74 @@
 __pycache__/
-lightningmodule/checkpoints/
-lightningmodule/lightning_logs/
-lightningmodule/wandb/
-lightningmodule/visualize/
+checkpoints/
+lightning_logs/
+wandb/
+visualize/
 CVAT/
+__pycache__/
+checkpoints/
+lightning_logs/
+wandb/
+visualize/
+CVAT/
+# Generated and compiled files
+*.pyc
+*.o
+*.exe
 
-# .pth
-*.pth
+# Build and packaged files
+__pycache__
+dist
+build
+egg-info
 
-# .out
-*.out
+# IDE and Editor files
+.vscode
+.idea
+.pycharm.debug
+.cache
+.pth
+.ckpt
+
+# Virtual environment files
+venv
+.env
+
+# Source code management files
+.svn
+.git
+
+# Graphical User Interface files
+.DS_Store
+Thumbs.db
+
+# Backup and temporary files
+*.bak
+*.tmp
+*.swp
+
+# Third-party libraries
+node_modules
+vendor
+
+# Log files
+*.log
+lightning_logs
+*.csv
+*.jpg
+*.json
+*.pt
+*.png
+
+# Operating system files
+.AppleDouble
+.LSOverride
+Desktop.ini
+
+data/
+logs/
+wandb/
+artifacts/
+saved_models/
+reference/
+pths/
+Segmentation/

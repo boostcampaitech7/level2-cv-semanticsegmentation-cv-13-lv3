@@ -1,3 +1,5 @@
+from constants import CLASSES, CLASS2IND
+
 import numpy as np
 import os
 import cv2
@@ -7,8 +9,6 @@ import json
 
 from sklearn.model_selection import GroupKFold
 from torch.utils.data import Dataset
-
-from constants import CLASSES, CLASS2IND
 
 import albumentations as A
 
