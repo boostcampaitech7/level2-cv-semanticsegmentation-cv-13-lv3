@@ -70,6 +70,7 @@ def train_model(args):
         image_files=train_files['filenames'],
         label_files=train_files['labelnames'],
         transforms = train_transforms
+    )
     valid_dataset = XRayDataset(
         image_files=valid_files['filenames'],
         label_files=valid_files['labelnames'],
