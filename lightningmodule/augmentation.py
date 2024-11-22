@@ -72,6 +72,21 @@ class EdgeDetection(A.ImageOnlyTransform):
 def load_transforms(args):
     transform = [
         # A.RandomScale(scale_limit=(0.9, 1.1), p=1.0),
+        # X-ray에 적합한 Affine 변환
+        A.Affine(
+            scale=(0.9, 1.1),           # 급격한 크기 변화 방지
+            translate_percent={
+                'x': (-0.07, 0.07),     # x축 이동
+                'y': (-0.07, 0.07)      # y축 이동
+            },
+            rotate=(-10, 10),           # 의료영상은 급격한 회전 지양
+            shear=(-7, 7),              # 약간의 전단 변환
+            interpolation=cv2.INTER_LINEAR,
+            mask_interpolation=cv2.INTER_NEAREST,
+            cval=0,                     # 빈 공간을 검은색으로
+            fit_output=True,            # 이미지가 잘리지 않도록 조정
+            p=1                         # 50% 확률로 적용
+        ),
         A.Resize(args.input_size, args.input_size),
         # ColorJitter를 사용하려면 ToFloat 사용해야됨
         # A.ToFloat(max_value=255),
