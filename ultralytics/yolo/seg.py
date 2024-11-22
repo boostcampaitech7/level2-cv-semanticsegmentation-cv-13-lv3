@@ -69,6 +69,11 @@ def train(data_config_path: str):
         optimizer=train_option["optimizer"],
     )
     
+    weight_dir = "runs/segment/train/weights"
+    for ckpt in glob(f"{weight_dir}/*.pt"):
+        if "best.pt" not in ckpt:
+            os.remove(ckpt)
+    
     wandb.finish()
 
 
