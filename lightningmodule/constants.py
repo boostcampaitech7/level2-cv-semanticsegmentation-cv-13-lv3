@@ -7,6 +7,8 @@ CLASSES = [
     'Triquetrum', 'Pisiform', 'Radius', 'Ulna',
 ]
 
+PALM_CLASSES =  ['Hamate', 'Scaphoid', 'Lunate', 'Trapezium', 'Capitate', 'Triquetrum', 'Trapezoid', 'Pisiform']
+
 CLASS2IND = {v: i for i, v in enumerate(CLASSES)}
 
 IND2CLASS = {v: k for k, v in CLASS2IND.items()}
