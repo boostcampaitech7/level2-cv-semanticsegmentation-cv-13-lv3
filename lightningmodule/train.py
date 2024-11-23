@@ -27,7 +27,6 @@ class CustomModelCheckpoint(ModelCheckpoint):
         # 파일 이름 형식 지정 (에폭 번호만 포함, val/dice 제거)
         return f"{self.filename}-bestEp_{epoch_num}"
 
-
 # 모델 학습과 검증을 수행하는 함수
 def train_model(args):
     args_dict = OmegaConf.to_container(args, resolve=True)
@@ -72,12 +71,14 @@ def train_model(args):
     train_dataset = XRayDataset(
         image_files=train_files['filenames'],
         label_files=train_files['labelnames'],
-        transforms=transforms
+        transforms=transforms,
+        use_snapmix=args.snapmix
     )
     valid_dataset = XRayDataset(
         image_files=valid_files['filenames'],
         label_files=valid_files['labelnames'],
-        transforms=transforms
+        transforms=transforms,
+        use_snapmix=False
     )
     train_loader = DataLoader(
         dataset=train_dataset, 

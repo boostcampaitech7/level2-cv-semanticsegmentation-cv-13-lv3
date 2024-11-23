@@ -36,19 +36,29 @@ class GridMaskAugmentation(A.ImageOnlyTransform):
 
         return image * mask
 
-def snapmix(image1, mask1, image2, mask2, beta=1.0, probability=0.5):
-    if random.random() > probability:
-        return image1, mask1
+class SnapMixAugmentation(A.DualTransform):
+    def __init__(self, beta=1.0, probability=0.5, always_apply=False, p=1.0):
+        super().__init__(always_apply=always_apply, p=p)
+        self.beta = beta
+        self.probability = probability
 
+    def apply(self, image, mask=None, image2=None, mask2=None, **params):
+        if random.random() > self.probability:
+            return image, mask
+        mixed_image, mixed_mask = snapmix(image, mask, image2, mask2, beta=self.beta)
+        return mixed_image, mixed_mask
+
+    def get_params_dependent_on_targets(self, params):
+        return params
+
+def snapmix(image1, mask1, image2, mask2, beta=1.0):
     assert image1.shape == image2.shape, "Input images must have the same dimensions"
     assert mask1.shape == mask2.shape, "Input masks must have the same dimensions"
 
     H, W, C = image1.shape if len(image1.shape) == 3 else (*image1.shape, 1)
 
-    # Sample lambda from Beta distribution
     lam = np.random.beta(beta, beta)
 
-    # Define rectangle coordinates for cropping
     cut_rat = np.sqrt(1.0 - lam)
     cut_w = int(W * cut_rat)
     cut_h = int(H * cut_rat)
@@ -64,29 +74,14 @@ def snapmix(image1, mask1, image2, mask2, beta=1.0, probability=0.5):
     mixed_image = image1.copy()
     mixed_image[y1:y2, x1:x2] = image2[y1:y2, x1:x2]
 
+    mixed_mask = mask1.copy()
     if len(mask1.shape) == 2:
-        mixed_mask = mask1.copy()
         mixed_mask[y1:y2, x1:x2] = mask2[y1:y2, x1:x2]
     else:
-        mixed_mask = mask1.copy()
         mixed_mask[y1:y2, x1:x2, :] = mask2[y1:y2, x1:x2, :]
 
     return mixed_image, mixed_mask
 
-class SnapMixAugmentation(A.ImageOnlyTransform):
-    def __init__(self, beta=1.0, probability=0.5, always_apply=False, p=1.0):
-        super().__init__(always_apply=always_apply, p=p)
-        self.beta = beta
-        self.probability = probability
-
-    def apply(self, image, **params):
-        if random.random() > self.probability:
-            return image
-        image1, mask1 = image, params['mask1']
-        image2, mask2 = params['image2'], params['mask2']
-        mixed_image, _ = snapmix(image1, mask1, image2, mask2, beta=self.beta)
-        return mixed_image
-    
 def load_transforms(args):
     transform = [
         A.Resize(args.input_size, args.input_size),
@@ -117,7 +112,7 @@ def load_transforms(args):
         A.ColorJitter(brightness=(1.0, 1.0), contrast=(1.5, 1.5), hue=(0.0, 0.0), saturation=(0.0, 0.0), p=1.0)
     ]
     
-    if getattr(args, 'snapmix', False):
-        transform.append(SnapMixAugmentation(beta=1.0, probability=0.5, p=0.5))
+    # if getattr(args, 'snapmix', False):
+    #     transform.append(SnapMixAugmentation(beta=1.0, probability=0.5, p=0.5))
 
     return A.Compose(transform)
