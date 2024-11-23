@@ -1,4 +1,4 @@
-from constants import CLASSES, CLASS2IND
+from constants import FINGER_CLASSES, FINGER_CLASS2IND
 
 import numpy as np
 import os
@@ -66,7 +66,7 @@ class XRayDataset(Dataset):
         
         if self.label_files:
             label_path = self.label_files[item]
-            label_shape = tuple(image.shape[:2]) + (len(CLASSES), )
+            label_shape = tuple(image.shape[:2]) + (len(FINGER_CLASSES), )
             label = np.zeros(label_shape, dtype=np.uint8)
             
             with open(label_path, "r") as f:
@@ -74,15 +74,16 @@ class XRayDataset(Dataset):
 
             for ann in annotations:
                 c = ann["label"]
-                class_ind = CLASS2IND[c]
-                points = np.array(ann["points"])
-                
-                class_label = np.zeros(image.shape[:2], dtype=np.uint8)
-                cv2.fillPoly(class_label, [points], 1)
-                label[..., class_ind] = class_label
+                if c in FINGER_CLASS2IND:
+                    class_ind = FINGER_CLASS2IND[c]
+                    points = np.array(ann["points"])
+                    
+                    class_label = np.zeros(image.shape[:2], dtype=np.uint8)
+                    cv2.fillPoly(class_label, [points], 1)
+                    label[..., class_ind] = class_label
         else:
             # No labels for test set
-            label = np.zeros((len(CLASSES), *image.shape[:2]), dtype=np.uint8)
+            label = np.zeros((len(FINGER_CLASSES), *image.shape[:2]), dtype=np.uint8)
         
         if self.transforms:
             inputs = {"image": image, "mask": label} if self.label_files else {"image": image}

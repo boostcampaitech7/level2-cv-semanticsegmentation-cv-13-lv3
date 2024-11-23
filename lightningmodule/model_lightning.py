@@ -1,4 +1,4 @@
-from constants import CLASSES, IND2CLASS
+from constants import FINGER_CLASSES, FINGER_IND2CLASS
 
 import torch
 import torch.optim as optim
@@ -85,7 +85,7 @@ class SegmentationModel(LightningModule):
         #self.log('best_epoch', self.best_epoch, logger=True)
 
         # Log Dice scores per class using WandB logger
-        dice_scores_dict = {'val/' + c: d.item() for c, d in zip(CLASSES, dices_per_class)}
+        dice_scores_dict = {'val/' + c: d.item() for c, d in zip(FINGER_CLASSES, dices_per_class)}
         self.log_dict(dice_scores_dict, on_epoch=True, logger=True)  # Log to WandB at the end of each epoch
 
         # 에폭이 끝나면 validation_dices 초기화
@@ -106,7 +106,7 @@ class SegmentationModel(LightningModule):
             for c, segm in enumerate(output):
                 rle = encode_mask_to_rle(segm)
                 self.rles.append(rle)
-                self.filename_and_class.append(f"{IND2CLASS[c]}_{image_name}")
+                self.filename_and_class.append(f"{FINGER_IND2CLASS[c]}_{image_name}")
 
 
     def on_test_epoch_end(self):
@@ -131,10 +131,10 @@ class SegmentationModel(LightningModule):
     def configure_optimizers(self):  
         # Optimizer 정의
         optimizer = optim.Adam(params=self.model.parameters(), lr=self.lr, weight_decay=1e-6)
-        #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=5, eta_min=1e-6)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=1e-6)
 
-        return optimizer
+        #return optimizer
         
         # 옵티마이저와 스케줄러 반환
-        #return [optimizer], [scheduler]
+        return [optimizer], [scheduler]
     

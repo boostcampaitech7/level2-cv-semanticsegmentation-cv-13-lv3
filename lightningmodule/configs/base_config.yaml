@@ -5,22 +5,22 @@ project_name: project4_test_run
 #----------------------------------#
 run_name: aug_test
 
-architecture: Unet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
-encoder_name: efficientnet-b0
+architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
+encoder_name: efficientnet-b7
 encoder_weight: imagenet
 
 seed: 42
 
-batch_size: 20
-num_workers: 8
+batch_size: 4
+num_workers: 4
 
-lr: 1e-4
+lr: 1e-3
 
-input_size: 512
-max_epoch: 5
+input_size: 1024
+max_epoch: 30
 valid_interval: 5
 clahe: true
-clahe_clip_limit: 2.0
-clahe_tile_grid_size: [8, 8]
+clahe_clip_limit: 4.0
+clahe_tile_grid_size: [4, 4]
 
 amp: True
