@@ -15,7 +15,6 @@ from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
 from augmentation import load_transforms
 from test import test_model  # 테스트 함수 임포트
-from augmentation import CLAHEAugmentation
 
 class CustomModelCheckpoint(ModelCheckpoint):
     def __init__(self, *args, **kwargs):
