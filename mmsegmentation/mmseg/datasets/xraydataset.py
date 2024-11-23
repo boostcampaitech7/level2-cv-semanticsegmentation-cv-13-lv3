@@ -62,7 +62,7 @@ class LoadXRayAnnotations(BaseTransform):
     CLASS2IND = {v: i for i, v in enumerate(CLASSES)}
 
     IND2CLASS = {v: k for k, v in CLASS2IND.items()}
-    def __init__(self, input_size=(512,512)):
+    def __init__(self, input_size=(2048, 2048)):
             self.input_size = input_size
 
     def transform(self, result):

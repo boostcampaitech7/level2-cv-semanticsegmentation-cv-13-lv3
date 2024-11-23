@@ -134,6 +134,7 @@ class SegmentationModel(LightningModule):
         scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=30, eta_min=1e-4)
 
         # return optimizer
+        # return optimizer
         
         # 옵티마이저와 스케줄러 반환
         return [optimizer], [scheduler]
