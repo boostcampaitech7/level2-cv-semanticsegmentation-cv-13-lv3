@@ -36,8 +36,21 @@ def train_model(args):
     seed_everything(args.seed)
     set_seed(args.seed)
 
-    # 체크포인트 경로 설정
-    checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}.ckpt")
+    # resume 체크포인트 경로 지정
+    if args.resume_checkpoint_suffix == None:
+        resume_checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}.ckpt")
+    else:
+        resume_checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}{args.resume_checkpoint_suffix}.ckpt")
+        
+    if args.resume:
+        # Resume 설정 확인
+        if os.path.exists(resume_checkpoint_path):
+            print(f"Resume : <{resume_checkpoint_path}> 체크포인트에서 학습 재개")
+        else:
+            raise FileNotFoundError(f"Resume : 체크포인트가 존재하지 않음 <{resume_checkpoint_path}>")
+    else:
+        resume_checkpoint_path = None
+        print("No Resume : 새로운 학습 시작")
 
     # WandB 설정
     wandb_logger = WandbLogger(
@@ -69,9 +82,8 @@ def train_model(args):
     train_dataset = XRayDataset(
         image_files=train_files['filenames'],
         label_files=train_files['labelnames'],
-        transforms=train_transforms
+        transforms = train_transforms
     )
-    
     valid_dataset = XRayDataset(
         image_files=valid_files['filenames'],
         label_files=valid_files['labelnames'],
@@ -137,7 +149,7 @@ def train_model(args):
     trainer.fit(seg_model, 
                 train_dataloaders=train_loader, 
                 val_dataloaders=valid_loader,
-                ckpt_path=checkpoint_path if args.resume else None  # 체크포인트 경로 전달
+                ckpt_path=resume_checkpoint_path if args.resume else None  # 체크포인트 경로 전달
                 )
     
     # 학습 종료 후 테스트 수행

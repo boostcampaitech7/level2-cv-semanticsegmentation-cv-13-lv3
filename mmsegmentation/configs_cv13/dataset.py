@@ -10,8 +10,8 @@ train_pipeline = [
 
 valid_pipeline = [
             dict(type='LoadImageFromFile'),
-            dict(type='Resize', scale=(512, 512)),
             dict(type='LoadXRayAnnotations'),
+            dict(type='Resize', scale=(512, 512)),
             dict(type='TransposeAnnotations'),
             dict(type='PackSegInputs')
         ]
