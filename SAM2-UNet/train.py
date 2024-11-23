@@ -1,20 +1,19 @@
-# torch
-import torch.nn as nn
+from model_lightning import SegmentationModel
+from xraydataset import split_data, XRayDataset
 from torch.utils.data import DataLoader
-from xraydataset import XRayDataset, split_data
-from utils import get_sorted_files_by_type, set_seed, Gsheet_param
-from constants import TRAIN_DATA_DIR
-from argparse import ArgumentParser, Namespace
+from lightning.pytorch.callbacks import ModelCheckpoint
+from lightning.pytorch import Trainer, seed_everything
+from omegaconf import OmegaConf
 import albumentations as A
 import os
 import torch
-from model_lightning import SegmentationModel
-from omegaconf import OmegaConf
-from lightning.pytorch import Trainer, seed_everything
-from lightning.pytorch.callbacks import ModelCheckpoint
+import torch.nn as nn
+from utils import get_sorted_files_by_type, set_seed, Gsheet_param
+from constants import TRAIN_DATA_DIR
+from argparse import ArgumentParser, Namespace
 from lightning.pytorch.loggers import WandbLogger
 from test import test_model  # 테스트 함수 임포트
-from augmentation import CLAHEAugmentation
+
 
 class CustomModelCheckpoint(ModelCheckpoint):
     def __init__(self, *args, **kwargs):
@@ -28,20 +27,16 @@ class CustomModelCheckpoint(ModelCheckpoint):
         return f"{self.filename}-bestEp_{epoch_num}"
 
 
-# 모델 학습과 검증을 수행하는 함수
 def train_model(args):
-    args_dict = OmegaConf.to_container(args, resolve=True)
-    run_name = args_dict.pop('run_name', None)
-    project_name = args_dict.pop('project_name', None)
-    seed_everything(args.seed)
+    # Seed 설정
+    seed_everything(args.seed, workers=True)
     set_seed(args.seed)
 
-    # resume 체크포인트 경로 지정
     if args.resume_checkpoint_suffix == None:
         resume_checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}.ckpt")
     else:
         resume_checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}{args.resume_checkpoint_suffix}.ckpt")
-        
+
     if args.resume:
         # Resume 설정 확인
         if os.path.exists(resume_checkpoint_path):
@@ -52,70 +47,66 @@ def train_model(args):
         resume_checkpoint_path = None
         print("No Resume : 새로운 학습 시작")
 
-    # WandB 설정
+    # WandB Logger 설정
     wandb_logger = WandbLogger(
-        project=project_name,
-        name=run_name,
-        config=args_dict,
-        resume="must" if args.resume else None,  # Resume=True일 때만 이어서 기록
-        id=args.wandb_id if args.resume else None  # Resume=True일 때만 WandB ID 설정
+        project=cfg.project_name,
+        name=cfg.run_name,
+        config=OmegaConf.to_container(cfg, resolve=True),
     )
+    
 
     # 데이터 로드
     image_root = os.path.join(TRAIN_DATA_DIR, 'DCM')
     label_root = os.path.join(TRAIN_DATA_DIR, 'outputs_json')
-    pngs = get_sorted_files_by_type(image_root, 'png')
-    jsons = get_sorted_files_by_type(label_root, 'json')
+    pngs = get_sorted_files_by_type(image_root, "png")
+    jsons = get_sorted_files_by_type(label_root, "json")
     train_files, valid_files = split_data(pngs, jsons)
-    
-    clahe_clip_limit = args.clahe_clip_limit
-    clahe_tile_grid_size = tuple(args.clahe_tile_grid_size)
-    
-    train_transforms = [A.Resize(args.input_size, args.input_size)]
-    if args.clahe:
-        print(f"Using CLAHE augmentation with clipLimit={clahe_clip_limit}, tileGridSize={clahe_tile_grid_size}")
-        clahe_aug = CLAHEAugmentation(clip_limit=clahe_clip_limit, tile_grid_size=clahe_tile_grid_size)
-        train_transforms.append(clahe_aug.albumentations_clahe())
-        
-    train_transforms = A.Compose(train_transforms)
-    
+
+    # 데이터셋 정의
     train_dataset = XRayDataset(
-        image_files=train_files['filenames'],
-        label_files=train_files['labelnames'],
-        transforms = train_transforms
+        image_files=train_files["filenames"],
+        label_files=train_files["labelnames"],
+        transforms=A.Compose([
+            A.Resize(args.input_size, args.input_size),
+            #A.Normalize()
+        ])
     )
     valid_dataset = XRayDataset(
-        image_files=valid_files['filenames'],
-        label_files=valid_files['labelnames'],
-        transforms=A.Resize(args.input_size, args.input_size)
+        image_files=valid_files["filenames"],
+        label_files=valid_files["labelnames"],
+        transforms=A.Compose([
+            A.Resize(args.input_size, args.input_size),
+            #A.Normalize()
+        ])
     )
+
+    # 데이터 로더
     train_loader = DataLoader(
-        dataset=train_dataset, 
+        dataset=train_dataset,
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=args.num_workers,
-        drop_last=True,
+        drop_last=True
     )
-      
-    # 주의: validation data는 이미지 크기가 크기 때문에 `num_wokers`는 커지면 메모리 에러가 발생할 수 있습니다.
     valid_loader = DataLoader(
-        dataset=valid_dataset, 
-        batch_size=2,
+        dataset=valid_dataset,
+        batch_size=2,  # validation 데이터의 메모리 문제 방지
         shuffle=False,
         num_workers=7,
         drop_last=False
     )
 
-    # 모델 및 Trainer 설정
+    # 손실 함수
     criterion = nn.BCEWithLogitsLoss()
-    seg_model = SegmentationModel(
-        criterion=criterion,
-        learning_rate=args.lr,
-        architecture=args.architecture,
-        encoder_name=args.encoder_name,
-        encoder_weight=args.encoder_weight
-    )
     
+    # 모델 정의
+    model = SegmentationModel(
+        num_classes=29,
+        learning_rate=args.learning_rate,
+        checkpoint_path='./pretrained/sam2_hiera_large.pt',
+        criterion=criterion
+    )
+
     # 체크포인트 콜백 : dice 기준 상위 k개
     checkpoint_callback_best = CustomModelCheckpoint(
         dirpath=args.checkpoint_dir,
@@ -133,20 +124,21 @@ def train_model(args):
         every_n_epochs=1  # 매 에폭마다 저장
     )
 
+    
+    # Trainer 설정
     trainer = Trainer(
+        max_epochs=args.max_epoch,
+        accelerator="gpu",
+        devices=1 if torch.cuda.is_available() else None,
+        callbacks=[checkpoint_callback_best, checkpoint_callback_latest],
         logger=wandb_logger,
         log_every_n_steps=5,
-        max_epochs=args.max_epoch,
-        check_val_every_n_epoch=args.valid_interval,
-        callbacks=[checkpoint_callback_best, checkpoint_callback_latest],
-        accelerator='gpu',
-        devices=1 if torch.cuda.is_available() else None,
         precision="16-mixed" if args.amp else 32,
-        #resume_from_checkpoint=checkpoint_path  # 체크포인트에서 학습 재개
+        check_val_every_n_epoch=args.valid_interval,
     )
 
-    # 학습 시작
-    trainer.fit(seg_model, 
+    # 학습 실행
+    trainer.fit(model, 
                 train_dataloaders=train_loader, 
                 val_dataloaders=valid_loader,
                 ckpt_path=resume_checkpoint_path if args.resume else None  # 체크포인트 경로 전달
@@ -157,7 +149,8 @@ def train_model(args):
         print("Train 완료 -> Test 시작!")
         test_model(args)  # 테스트 함수 호출
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     parser = ArgumentParser()
     parser.add_argument("--config", type=str, default="configs/base_config.yaml")
     parser.add_argument("--resume", action="store_true", help="resume으로 실행할 건지")
@@ -171,6 +164,7 @@ if __name__ == '__main__':
     cfg.resume = args.resume
     cfg.wandb_id = args.wandb_id
     cfg.auto_eval = args.auto_eval
-    
+
+    # 학습 시작
     train_model(cfg)
     Gsheet_param(cfg)

@@ -15,7 +15,6 @@ from omegaconf import OmegaConf
 # 테스트를 수행하는 함수
 def test_model(args):
 
-    # 모델 및 체크포인트 경로 설정
     if args.resume_checkpoint_suffix == None:
         checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}.ckpt")
     else:
