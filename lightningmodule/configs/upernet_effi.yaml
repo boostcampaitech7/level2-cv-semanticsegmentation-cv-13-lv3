@@ -8,7 +8,7 @@ run_name: test
 architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
 encoder_name: efficientnet-b7
 encoder_weight: imagenet
-
+# timm 라이브러리 사용하려면 encoder 이름에 tu- 붙이면 됨
 seed: 42
 
 batch_size: 4

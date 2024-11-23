@@ -90,30 +90,31 @@ class SnapMixAugmentation(A.ImageOnlyTransform):
 def load_transforms(args):
     transform = [
         A.Resize(args.input_size, args.input_size),
-        A.CLAHE(clip_limit=2.0, tile_grid_size=(8, 8), p=0.5),
-        A.Affine(
-            scale=(0.9, 1.1),           # 급격한 크기 변화 방지
-            translate_percent={
-                'x': (-0.05, 0.05),     # x축 이동
-                'y': (-0.05, 0.05)      # y축 이동
-            },
-            rotate=(-10, 10),           # 의료영상은 급격한 회전 지양
-            shear=(-7, 7),              # 약간의 전단 변환
-            interpolation=cv2.INTER_LINEAR,
-            mask_interpolation=cv2.INTER_NEAREST,
-            cval=0,                     # 빈 공간을 검은색으로
-            p=0.9                         
-        ),
-        A.HorizontalFlip(p=0.5),
-        A.Sharpen(
-            alpha=(0.5, 0.5),
-            lightness=(1.0, 1.0),
-            p=0.4), 
-        GridMaskAugmentation(num_grid=40, grid_ratio=0.4, fill_value=0, p=0.3),
-        A.ElasticTransform(alpha=40, sigma=8, p=0.1),
-        A.GridDistortion(num_steps=8, distort_limit=0.5, p=0.2), 
-        A.RandomGamma(gamma_limit=(30, 200), p=0.3),
-        A.Normalize(normalization='min_max', p=1.0)
+        # A.CLAHE(clip_limit=2.0, tile_grid_size=(8, 8), p=0.5),
+        # A.Affine(
+        #     scale=(0.9, 1.1),           # 급격한 크기 변화 방지
+        #     translate_percent={
+        #         'x': (-0.05, 0.05),     # x축 이동
+        #         'y': (-0.05, 0.05)      # y축 이동
+        #     },
+        #     rotate=(-10, 10),           # 의료영상은 급격한 회전 지양
+        #     shear=(-7, 7),              # 약간의 전단 변환
+        #     interpolation=cv2.INTER_LINEAR,
+        #     mask_interpolation=cv2.INTER_NEAREST,
+        #     cval=0,                     # 빈 공간을 검은색으로
+        #     p=0.9                         
+        # ),
+        # A.HorizontalFlip(p=0.5),
+        # A.Sharpen(
+        #     alpha=(0.5, 0.5),
+        #     lightness=(1.0, 1.0),
+        #     p=0.4),
+        # GridMaskAugmentation(num_grid=40, grid_ratio=0.4, fill_value=0, p=0.3),
+        # A.ElasticTransform(alpha=40, sigma=8, p=0.1),
+        # A.GridDistortion(num_steps=8, distort_limit=0.5, p=0.2), 
+        # A.RandomGamma(gamma_limit=(30, 200), p=0.3),
+        # A.Normalize(normalization='min_max', p=1.0)
+        A.ColorJitter(brightness=(1.0, 1.0), contrast=(1.5, 1.5), hue=(0.0, 0.0), saturation=(0.0, 0.0), p=1.0)
     ]
     
     if getattr(args, 'snapmix', False):
