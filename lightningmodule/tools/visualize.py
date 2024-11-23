@@ -49,10 +49,10 @@ def create_pred_mask_dict(csv_path, input_size):
                 mask_resized = np.array(Image.fromarray(mask).resize((input_size, input_size)))
                 masks[classname]=mask_resized
                 mask_test.append(mask_resized)
-        img = Image.fromarray(label2rgb(np.array(mask_test)))
-        img.save(image_name)
-        if idx > 10:
-            break
+        # img = Image.fromarray(label2rgb(np.array(mask_test)))
+        # img.save(image_name)
+        # if idx > 10:
+        #     break
         mask_dict[image_name] = masks
     print('mask creation from csv is done')
     return mask_dict
@@ -234,7 +234,7 @@ def main():
         if args.csv is not None:
             mask_dict = create_pred_mask_dict(args.csv, args.input_size)
 
-        # visualize_compare(args, visual_loader, mask_dict)
+        visualize_compare(args, visual_loader, mask_dict)
 
 if __name__ == '__main__':
     main()

@@ -9,7 +9,7 @@ import torch.nn.functional as F
 import pandas as pd
 from torchvision.transforms import ToTensor
 
-from utils import encode_mask_to_rle, decode_rle_to_mask
+from utils import encode_mask_to_rle, decode_rle_to_mask, label2rgb
 
 from constants import PALM_CLASSES, PALM_IND2CLASS
 
@@ -44,14 +44,15 @@ def preprocess_images_batch(images, min_pos, max_pos, inference_size=(1024, 1024
         width_margin = int((H - crop_w[i]) * 0.005)  
         height_margin = int((W - crop_h[i]) * 0.005)  
 
+        cropped_x = min_x[i] - width_margin
+        cropped_y = min_y[i] - height_margin
+
         cropped = images[i, :, 
-                         min_y[i]-height_margin:max_y[i]+height_margin, 
-                         min_x[i]-width_margin:max_x[i]+width_margin]  # 크롭
+                         cropped_y:max_y[i]+height_margin, 
+                         cropped_x:max_x[i]+width_margin]  # 크롭
         cropped_images.append(cropped)
-        original_sizes.append((cropped.shape[1], cropped.shape[2]))  # (H, W)
-        print(f'cropped : {cropped.shape}')
-        crop_offsets.append((min_x[i]-width_margin, min_y[i]-height_margin))
-        print(f'cropped offset : {(min_x[i]-width_margin, min_y[i]-height_margin)}')
+        crop_offsets.append((cropped_x, cropped_y))
+        #print(f'cropped offset : {(cropped_x, cropped_y)}')
 
     # 2. Pad to Square
     max_crop_H = max([img.shape[1] for img in cropped_images])  # 최대 높이
@@ -72,8 +73,8 @@ def preprocess_images_batch(images, min_pos, max_pos, inference_size=(1024, 1024
             value=0,
         )
         padded_images.append(padded)
+        original_sizes.append((padded.shape[1], padded.shape[2]))  # (H, W)
         pad_offsets.append((pad_W // 2, pad_H // 2))
-        print(f'pad offset : {(pad_W // 2, pad_H // 2)}')
 
     # 3. Stack Padded Images
     padded_images = torch.stack(padded_images, dim=0)  # (B, C, max_dim, max_dim)
@@ -106,10 +107,27 @@ def restore_to_original_sizes(predictions, original_sizes, crop_offsets, pad_off
             predictions[i].unsqueeze(0), size=(orig_H, orig_W), mode="bilinear", align_corners=False
         ).squeeze(0)
 
-        # Pad back to original position
-        pad_x, pad_y = pad_offsets[i]
+                # Determine the position in the target canvas
         crop_x, crop_y = crop_offsets[i]
-        restored_outputs[i, :, crop_y + pad_y : crop_y + pad_y + orig_H, crop_x + pad_x : crop_x + pad_x + orig_W] = resized_output
+        pad_x, pad_y = pad_offsets[i]
+
+        # Adjust the position: take crop_offsets into account, subtract pad_offsets
+        start_x = crop_x - pad_x
+        start_y = crop_y - pad_y
+        end_x = start_x + orig_W
+        end_y = start_y + orig_H
+
+        # Ensure the coordinates are valid within the canvas size
+        start_x = max(0, start_x)
+        start_y = max(0, start_y)
+        end_x = min(target_W, end_x)
+        end_y = min(target_H, end_y)
+
+
+        #print(f'restored offset : {(start_x, end_x)}')
+
+        # Place the resized output into the restored canvas
+        restored_outputs[i, :, start_y:end_y, start_x:end_x] = resized_output[:, :end_y-start_y, :end_x-start_x]
 
     return restored_outputs
 
@@ -217,7 +235,7 @@ class SegmentationModel_palm(SegmentationModel):
 
         # 그룹화하여 처리
         grouped = df.groupby('image_name')
-        for image_name, group in grouped:
+        for idx, (image_name, group) in enumerate(grouped):
             crop_info[image_name] = dict()
             masks = []
             for _, row in group.iterrows():
@@ -235,9 +253,9 @@ class SegmentationModel_palm(SegmentationModel):
             min_x, max_x = x_indices.min(), x_indices.max()
             min_y, max_y = y_indices.min(), y_indices.max()
 
-            crop_info[image_name]['min'] = (min_x//2, min_y//2)
-            crop_info[image_name]['max'] = (max_x//2, max_y//2)
-            
+            crop_info[image_name]['min'] = (min_x, min_y)
+            crop_info[image_name]['max'] = (max_x, max_y)
+
         return crop_info
 
     def ensemble_palm_batch(self, images, crop_infos):
@@ -260,6 +278,9 @@ class SegmentationModel_palm(SegmentationModel):
         resized_images, crop_offsets, pad_offsets, original_sizes = preprocess_images_batch(
             images, min_pos, max_pos, inference_size=inference_size
         )
+
+        print(f'interpolated size (should be 1k) : {(resized_images.shape)}')
+
         # 4. Forward pass
         palm_outputs = self(resized_images)
 
