@@ -13,8 +13,8 @@ from omegaconf import OmegaConf
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
+from augmentation import load_transforms
 from test import test_model  # 테스트 함수 임포트
-from augmentation import CLAHEAugmentation
 
 class CustomModelCheckpoint(ModelCheckpoint):
     def __init__(self, *args, **kwargs):
@@ -68,26 +68,16 @@ def train_model(args):
     jsons = get_sorted_files_by_type(label_root, 'json')
     train_files, valid_files = split_data(pngs, jsons)
     
-    clahe_clip_limit = args.clahe_clip_limit
-    clahe_tile_grid_size = tuple(args.clahe_tile_grid_size)
-    
-    train_transforms = [A.Resize(args.input_size, args.input_size)]
-    if args.clahe:
-        print(f"Using CLAHE augmentation with clipLimit={clahe_clip_limit}, tileGridSize={clahe_tile_grid_size}")
-        clahe_aug = CLAHEAugmentation(clip_limit=clahe_clip_limit, tile_grid_size=clahe_tile_grid_size)
-        train_transforms.append(clahe_aug.albumentations_clahe())
-        
-    train_transforms = A.Compose(train_transforms)
-    
+    transforms = load_transforms(args)
     train_dataset = XRayDataset(
         image_files=train_files['filenames'],
         label_files=train_files['labelnames'],
-        transforms = train_transforms
+        transforms=transforms
     )
     valid_dataset = XRayDataset(
         image_files=valid_files['filenames'],
         label_files=valid_files['labelnames'],
-        transforms=A.Resize(args.input_size, args.input_size)
+        transforms=transforms
     )
     train_loader = DataLoader(
         dataset=train_dataset, 
