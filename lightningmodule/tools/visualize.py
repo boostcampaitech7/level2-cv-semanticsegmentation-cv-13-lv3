@@ -37,7 +37,7 @@ def create_pred_mask_dict(csv_path, input_size):
 
     # 그룹화하여 처리
     grouped = df.groupby('image_name')
-    for image_name, group in grouped:
+    for idx, (image_name, group) in enumerate(grouped):
         print(f'creating mask for {image_name}...')
         masks = dict()
         mask_test = []
@@ -45,13 +45,14 @@ def create_pred_mask_dict(csv_path, input_size):
             classname = row['class']
             rle = row['rle']
             if isinstance(rle, str):
-                mask = decode_rle_to_mask(rle, 1024, 1024)
+                mask = decode_rle_to_mask(rle, 2048, 2048)
                 mask_resized = np.array(Image.fromarray(mask).resize((input_size, input_size)))
                 masks[classname]=mask_resized
-        #         mask_test.append(mask_resized)
-        # img = Image.fromarray(label2rgb(np.array(mask_test)))
-        # img.save(image_name)
-
+                mask_test.append(mask_resized)
+        img = Image.fromarray(label2rgb(np.array(mask_test)))
+        img.save(image_name)
+        if idx > 10:
+            break
         mask_dict[image_name] = masks
     print('mask creation from csv is done')
     return mask_dict
@@ -233,7 +234,7 @@ def main():
         if args.csv is not None:
             mask_dict = create_pred_mask_dict(args.csv, args.input_size)
 
-        visualize_compare(args, visual_loader, mask_dict)
+        # visualize_compare(args, visual_loader, mask_dict)
 
 if __name__ == '__main__':
     main()
