@@ -2,7 +2,8 @@ import cv2
 import random
 import numpy as np
 import albumentations as A
-
+import torch
+from torch.utils.data import Dataset
 class GridMaskAugmentation(A.ImageOnlyTransform):
     def __init__(self, num_grid=5, grid_ratio=0.5, fill_value=0, p=0.5):
         """
@@ -82,29 +83,38 @@ def snapmix(image1, mask1, image2, mask2, beta=1.0):
 
     return mixed_image, mixed_mask
 
-def copypaste(image, mask, alpha=0.5, beta=0.5):
-    h, w = image.shape[:2]
+def copypaste(image, label):
+    _, H, W = image.shape
 
-    patch_w, patch_h = np.random.randint(w // 4, w // 2), np.random.randint(h // 4, h // 2)
-    start_x, start_y = np.random.randint(0, w - patch_w), np.random.randint(0, h - patch_h)
+    patch_w, patch_h = random.randint(W // 4, W // 2), random.randint(H // 4, H // 2)
+    start_x, start_y = random.randint(0, W - patch_w), random.randint(0, H - patch_h)
     end_x, end_y = start_x + patch_w, start_y + patch_h
 
-    patch = np.random.randint(0, 256, (patch_h, patch_w, 3), dtype=np.uint8)
-    patch_mask = np.random.randint(0, 2, (patch_h, patch_w, 1), dtype=np.uint8)
+    patch = torch.randint(0, 256, (image.shape[0], patch_h, patch_w), dtype=image.dtype)
+    patch_mask = torch.randint(0, 2, (label.shape[0], patch_h, patch_w), dtype=label.dtype)
 
-    expanded_patch_mask = np.repeat(patch_mask, mask.shape[-1], axis=-1)
+    image[:, start_y:end_y, start_x:end_x] = patch
+    label[:, start_y:end_y, start_x:end_x] = patch_mask
 
-    overlay = image.copy()
-    overlay[start_y:end_y, start_x:end_x] = patch
+    return image, label
 
-    overlay_mask = mask.copy()
-    overlay_mask[start_y:end_y, start_x:end_x, :] = expanded_patch_mask 
+class CopyPasteDataset(Dataset):
+    def __init__(self, base_dataset, use_copypaste=False):
 
-    blended_image = cv2.addWeighted(image, alpha, overlay, beta, 0)
-    blended_mask = np.maximum(mask, overlay_mask)
+        self.base_dataset = base_dataset
+        self.use_copypaste = use_copypaste
 
-    return blended_image, blended_mask
+    def __len__(self):
+        return len(self.base_dataset)
 
+    def __getitem__(self, idx):
+        image_name, image, label = self.base_dataset[idx]
+
+        if self.use_copypaste:
+            image, label = copypaste(image, label)
+
+        return image_name, image, label
+    
 def load_transforms(args):
     transform = [
         A.Resize(args.input_size, args.input_size),
