@@ -72,7 +72,8 @@ def train_model(args):
     base_train_dataset = XRayDataset(
         image_files=train_files['filenames'],
         label_files=train_files['labelnames'],
-        transforms=transforms
+        transforms=transforms,
+        copypaste=True
     )   
 
     train_dataset = SnapMixDataset(

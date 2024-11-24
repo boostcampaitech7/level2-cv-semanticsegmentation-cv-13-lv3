@@ -82,6 +82,26 @@ def snapmix(image1, mask1, image2, mask2, beta=1.0):
 
     return mixed_image, mixed_mask
 
+def copypaste(image, mask, alpha=0.5, beta=0.5):
+    h, w = image.shape[:2]
+
+    patch_w, patch_h = np.random.randint(w // 4, w // 2), np.random.randint(h // 4, h // 2)
+    start_x, start_y = np.random.randint(0, w - patch_w), np.random.randint(0, h - patch_h)
+    end_x, end_y = start_x + patch_w, start_y + patch_h
+
+    patch = np.random.randint(0, 256, (patch_h, patch_w, 3), dtype=np.uint8)
+    patch_mask = np.random.randint(0, 2, (patch_h, patch_w, 1), dtype=np.uint8)
+
+    overlay = image.copy()
+    overlay[start_y:end_y, start_x:end_x] = patch
+    overlay_mask = mask.copy()
+    overlay_mask[start_y:end_y, start_x:end_x] = patch_mask.squeeze()
+
+    blended_image = cv2.addWeighted(image, alpha, overlay, beta, 0)
+    blended_mask = np.maximum(mask, overlay_mask)
+
+    return blended_image, blended_mask
+
 def load_transforms(args):
     transform = [
         A.Resize(args.input_size, args.input_size),
@@ -112,7 +132,7 @@ def load_transforms(args):
         A.ColorJitter(brightness=(1.0, 1.0), contrast=(1.5, 1.5), hue=(0.0, 0.0), saturation=(0.0, 0.0), p=1.0)
     ]
     
-    # if getattr(args, 'snapmix', False):
-    #     transform.append(SnapMixAugmentation(beta=1.0, probability=0.5, p=0.5))
+    if getattr(args, 'copypaste', False):
+        transform.append(A.Lambda(image=copypaste, mask=copypaste, p=0.5))
 
     return A.Compose(transform)
