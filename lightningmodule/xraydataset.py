@@ -1,4 +1,5 @@
 from constants import CLASSES, CLASS2IND
+from augmentation import copypaste
 
 import numpy as np
 import os
@@ -54,7 +55,7 @@ class XRayDataset(Dataset):
         self.image_files = image_files
         self.label_files = label_files  # Optional for test set without labels
         self.transforms = transforms
-        self.copypaste = copypaste
+        self.copypaste = copy_paste
         
     def __len__(self):
         return len(self.image_files)
@@ -78,6 +79,7 @@ class XRayDataset(Dataset):
                 class_label = np.zeros(image.shape[:2], dtype=np.uint8)
                 cv2.fillPoly(class_label, [points], 1)
                 label[..., class_ind] = class_label
+                
         if self.copypaste and label is not None:
             image, label = copypaste(image, label)
             

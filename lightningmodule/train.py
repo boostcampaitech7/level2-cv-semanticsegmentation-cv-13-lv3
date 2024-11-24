@@ -73,7 +73,7 @@ def train_model(args):
         image_files=train_files['filenames'],
         label_files=train_files['labelnames'],
         transforms=transforms,
-        copypaste=True
+        copy_paste=True
     )   
 
     train_dataset = SnapMixDataset(

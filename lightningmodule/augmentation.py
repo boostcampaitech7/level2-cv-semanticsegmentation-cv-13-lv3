@@ -92,10 +92,13 @@ def copypaste(image, mask, alpha=0.5, beta=0.5):
     patch = np.random.randint(0, 256, (patch_h, patch_w, 3), dtype=np.uint8)
     patch_mask = np.random.randint(0, 2, (patch_h, patch_w, 1), dtype=np.uint8)
 
+    expanded_patch_mask = np.repeat(patch_mask, mask.shape[-1], axis=-1)
+
     overlay = image.copy()
     overlay[start_y:end_y, start_x:end_x] = patch
+
     overlay_mask = mask.copy()
-    overlay_mask[start_y:end_y, start_x:end_x] = patch_mask.squeeze()
+    overlay_mask[start_y:end_y, start_x:end_x, :] = expanded_patch_mask 
 
     blended_image = cv2.addWeighted(image, alpha, overlay, beta, 0)
     blended_mask = np.maximum(mask, overlay_mask)
