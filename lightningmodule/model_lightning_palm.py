@@ -12,6 +12,7 @@ from torchvision.transforms import ToTensor
 from utils import encode_mask_to_rle, decode_rle_to_mask, label2rgb
 
 from constants import PALM_CLASSES, PALM_IND2CLASS
+from model_palm import load_model
 
 def preprocess_images_batch(images, min_pos, max_pos, inference_size=(1024, 1024)):
     """
@@ -52,7 +53,7 @@ def preprocess_images_batch(images, min_pos, max_pos, inference_size=(1024, 1024
                          cropped_x:max_x[i]+width_margin]  # 크롭
         cropped_images.append(cropped)
         crop_offsets.append((cropped_x, cropped_y))
-        #print(f'cropped offset : {(cropped_x, cropped_y)}')
+        print(f'cropped offset : {(cropped_x, cropped_y)}')
 
     # 2. Pad to Square
     max_crop_H = max([img.shape[1] for img in cropped_images])  # 최대 높이
@@ -124,7 +125,7 @@ def restore_to_original_sizes(predictions, original_sizes, crop_offsets, pad_off
         end_y = min(target_H, end_y)
 
 
-        #print(f'restored offset : {(start_x, end_x)}')
+        print(f'restored offset : {(start_x, end_x)}')
 
         # Place the resized output into the restored canvas
         restored_outputs[i, :, start_y:end_y, start_x:end_x] = resized_output[:, :end_y-start_y, :end_x-start_x]
@@ -223,9 +224,12 @@ def pad_image_to_target(image, pad, target_size=(2048, 2048)):
 
 class SegmentationModel_palm(SegmentationModel):
 
-    def __init__(self, gt_csv, architecture="UperNet", encoder_name="efficientnet-b7", encoder_weight="imagenet"):
+    def __init__(self, gt_csv=None, architecture="UperNet", encoder_name="efficientnet-b7", encoder_weight="imagenet"):
         super().__init__(architecture=architecture, encoder_name=encoder_name, encoder_weight=encoder_weight)
-        self.palm_crop_info = self.get_palm_box(gt_csv)
+        self.model = self.load_model(architecture, encoder_name, encoder_weight)
+        self.palm_crop_info = None
+        if gt_csv is not None:
+            self.palm_crop_info = self.get_palm_box(gt_csv)
         self.toTensor = ToTensor()
     
     def get_palm_box(self, csv_path):
@@ -279,7 +283,7 @@ class SegmentationModel_palm(SegmentationModel):
             images, min_pos, max_pos, inference_size=inference_size
         )
 
-        # print(f'interpolated size (should be 1k) : {(resized_images.shape)}')
+        print(f'interpolated size (should be 1k) : {(resized_images.shape)}')
 
         # 4. Forward pass
         palm_outputs = self(resized_images)
@@ -288,6 +292,30 @@ class SegmentationModel_palm(SegmentationModel):
         restored_outputs = restore_to_original_sizes(palm_outputs, original_sizes, crop_offsets, pad_offsets)
 
         return restored_outputs
+
+    def on_validation_epoch_end(self):
+            dices = torch.cat(self.validation_dices, 0)
+            dices_per_class = torch.mean(dices, 0)
+            avg_dice = torch.mean(dices_per_class).item()
+            
+            # 로그와 체크포인트 저장을 위한 모니터링 지표로 사용
+            self.log('val/dice', avg_dice, prog_bar=True)
+
+            # Best Dice 및 Best Epoch 갱신
+            if avg_dice > self.best_dice:
+                self.best_dice = avg_dice
+                self.best_epoch = self.current_epoch  # Best Epoch 갱신
+                print(f"Best performance improved: {self.best_dice:.4f} at Epoch: {self.best_epoch}")
+                
+            # WandB에 현재 Best Epoch 기록
+            #self.log('best_epoch', self.best_epoch, logger=True)
+
+            # Log Dice scores per class using WandB logger
+            dice_scores_dict = {'val/' + c: d.item() for c, d in zip(PALM_CLASSES, dices_per_class)}
+            self.log_dict(dice_scores_dict, on_epoch=True, logger=True)  # Log to WandB at the end of each epoch
+
+            # 에폭이 끝나면 validation_dices 초기화
+            self.validation_dices.clear()
 
     def test_step(self, batch, batch_idx):
         image_names, images = batch

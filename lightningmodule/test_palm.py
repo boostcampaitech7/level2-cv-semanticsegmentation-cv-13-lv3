@@ -7,7 +7,6 @@ from argparse import ArgumentParser
 import albumentations as A
 import os
 import torch
-from model_lightning import SegmentationModel
 from model_lightning_palm import SegmentationModel_palm
 from lightning.pytorch import Trainer
 import numpy as np
@@ -18,7 +17,7 @@ def test_model(args):
 
     # 모델 및 체크포인트 경로 설정
     checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}.ckpt")
-    
+    print(checkpoint_path)
     seg_model = SegmentationModel_palm.load_from_checkpoint(checkpoint_path=checkpoint_path, gt_csv=args.standard_csv_path)
 
     image_files = None
@@ -39,7 +38,7 @@ def test_model(args):
 
         image_files = np.array(pngs)
 
-    test_dataset = XRayDataset(image_files=image_files, transforms=None)  # 원하는 입력 크기로 조정
+    test_dataset = XRayDataset(image_files=image_files, transforms=A.Resize(2048,2048))  # 원하는 입력 크기로 조정
     test_loader = DataLoader(
         dataset=test_dataset,
         batch_size=8,

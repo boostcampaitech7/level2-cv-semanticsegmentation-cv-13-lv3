@@ -17,7 +17,6 @@ class SegmentationModel(LightningModule):
         super(SegmentationModel, self).__init__()
         self.save_hyperparameters(ignore=['criterion'])  # criterion은 제외
         self.model = load_model(architecture, encoder_name, encoder_weight)
-        self.model_palm = None
         self.criterion = criterion
         self.lr = learning_rate
         self.thr = thr
