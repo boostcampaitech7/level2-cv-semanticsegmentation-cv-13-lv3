@@ -274,12 +274,12 @@ class SegmentationModel_palm(SegmentationModel):
         min_pos = torch.tensor([info['min'] for info in crop_infos], device=images.device)
         max_pos = torch.tensor([info['max'] for info in crop_infos], device=images.device)
 
-        # 1. Preprocess Images (Crop, Pad, Resize)
+        # 1,2,3. Preprocess Images (Crop, Pad, Resize)
         resized_images, crop_offsets, pad_offsets, original_sizes = preprocess_images_batch(
             images, min_pos, max_pos, inference_size=inference_size
         )
 
-        print(f'interpolated size (should be 1k) : {(resized_images.shape)}')
+        # print(f'interpolated size (should be 1k) : {(resized_images.shape)}')
 
         # 4. Forward pass
         palm_outputs = self(resized_images)

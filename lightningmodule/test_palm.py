@@ -2,7 +2,7 @@
 from torch.utils.data import DataLoader
 from xraydataset import XRayDataset, split_data
 from utils import get_sorted_files_by_type
-from constants import TEST_DATA_DIR, TRAIN_DATA_DIR
+from constants import TEST_DATA_DIR, PALM_TRAIN_DATA_DIR
 from argparse import ArgumentParser
 import albumentations as A
 import os
@@ -19,19 +19,18 @@ def test_model(args):
     # 모델 및 체크포인트 경로 설정
     checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}.ckpt")
     
-    seg_model = SegmentationModel.load_from_checkpoint(checkpoint_path=checkpoint_path, gt_csv=args.standard_csv_path)
+    seg_model = SegmentationModel_palm.load_from_checkpoint(checkpoint_path=checkpoint_path, gt_csv=args.standard_csv_path)
 
     image_files = None
     if args.valid:
 
-        image_root = os.path.join(TRAIN_DATA_DIR, 'DCM')
-        label_root = os.path.join(TRAIN_DATA_DIR, 'outputs_json')
+        image_root = os.path.join(PALM_TRAIN_DATA_DIR, 'DCM')
+        label_root = os.path.join(PALM_TRAIN_DATA_DIR, 'outputs_json')
 
         pngs = get_sorted_files_by_type(image_root, 'png')
         jsons = get_sorted_files_by_type(label_root, 'json')
 
         _, valid_files = split_data(pngs, jsons)
-
         image_files = valid_files['filenames']
     else:
         #데이터 로드 및 테스트
@@ -40,7 +39,7 @@ def test_model(args):
 
         image_files = np.array(pngs)
 
-    test_dataset = XRayDataset(image_files=image_files, transforms=A.Resize(args.input_size, args.input_size))  # 원하는 입력 크기로 조정
+    test_dataset = XRayDataset(image_files=image_files, transforms=None)  # 원하는 입력 크기로 조정
     test_loader = DataLoader(
         dataset=test_dataset,
         batch_size=8,

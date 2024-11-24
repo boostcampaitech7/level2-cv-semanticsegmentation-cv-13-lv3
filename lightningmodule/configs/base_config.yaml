@@ -27,4 +27,4 @@ valid: True
 
 amp: True
 
-standard_csv_path: standard_output.csv
+standard_csv_path: standard_valid.csv
