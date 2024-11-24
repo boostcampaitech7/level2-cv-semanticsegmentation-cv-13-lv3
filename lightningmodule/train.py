@@ -2,6 +2,7 @@
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from xraydataset import XRayDataset, split_data
+from snapmix import SnapMixDataset
 from utils import get_sorted_files_by_type, set_seed, Gsheet_param
 from constants import TRAIN_DATA_DIR
 from argparse import ArgumentParser, Namespace
@@ -68,17 +69,22 @@ def train_model(args):
     train_files, valid_files = split_data(pngs, jsons)
     
     transforms = load_transforms(args)
-    train_dataset = XRayDataset(
+    base_train_dataset = XRayDataset(
         image_files=train_files['filenames'],
         label_files=train_files['labelnames'],
-        transforms=transforms,
-        use_snapmix=args.snapmix
+        transforms=transforms
+    )   
+
+    train_dataset = SnapMixDataset(
+        base_dataset=base_train_dataset,
+        beta=args.snapmix.beta,  
+        probability=args.snapmix.probability  
     )
+    
     valid_dataset = XRayDataset(
         image_files=valid_files['filenames'],
         label_files=valid_files['labelnames'],
         transforms=transforms,
-        use_snapmix=False
     )
     train_loader = DataLoader(
         dataset=train_dataset, 
@@ -154,6 +160,9 @@ if __name__ == '__main__':
     parser.add_argument("--resume", action="store_true", help="resume으로 실행할 건지")
     parser.add_argument("--wandb_id", type=str, default=None, help="resume 할 때 WandB에서 기존 실험에 이어서 기록하게 wandb id")
     parser.add_argument("--auto_eval", action="store_true", help="학습 끝나고 자동으로 test 실행")
+    parser.add_argument("--snapmix", action="store_true", help="SnapMix 활성화")
+    parser.add_argument("--snapmix_beta", type=float, default=1.0, help="SnapMix beta 값")
+    parser.add_argument("--snapmix_prob", type=float, default=0.5, help="SnapMix 적용 확률")
     
     args = parser.parse_args()
     with open(args.config, 'r') as f:
@@ -162,6 +171,11 @@ if __name__ == '__main__':
     cfg.resume = args.resume
     cfg.wandb_id = args.wandb_id
     cfg.auto_eval = args.auto_eval
+    cfg.snapmix.enabled = args.snapmix
+    if args.snapmix_beta is not None:
+        cfg.snapmix.beta = args.snapmix_beta
+    if args.snapmix_prob is not None:
+        cfg.snapmix.probability = args.snapmix_prob
     
     train_model(cfg)
     Gsheet_param(cfg)
