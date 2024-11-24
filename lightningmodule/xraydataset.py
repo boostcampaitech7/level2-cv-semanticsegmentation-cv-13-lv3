@@ -1,5 +1,4 @@
 from constants import CLASSES, CLASS2IND
-from augmentation import copypaste
 
 import numpy as np
 import os
@@ -48,19 +47,34 @@ def split_data(pngs, jsons, K=5, valid_idx=5):
 
 class XRayDataset(Dataset):
     def __init__(self, image_files, label_files=None, transforms=None):
+<<<<<<< HEAD
+=======
+        """
+        image_files : list of image file paths
+        label_files : list of label file paths (None for test sets)
+        """
+>>>>>>> main
         self.image_files = image_files
         self.label_files = label_files
         self.transforms = transforms
+<<<<<<< HEAD
 
     def __len__(self):
         return len(self.image_files)
 
+=======
+    def __len__(self):
+        return len(self.image_files)
+>>>>>>> main
     def __getitem__(self, item):
         image_path = self.image_files[item]
         image_name = os.path.basename(image_path)
         image = cv2.imread(image_path).astype(np.float32)
+<<<<<<< HEAD
 
         label = None
+=======
+>>>>>>> main
         if self.label_files:
             label_path = self.label_files[item]
             label_shape = tuple(image.shape[:2]) + (len(CLASSES), )
@@ -74,15 +88,27 @@ class XRayDataset(Dataset):
                 class_label = np.zeros(image.shape[:2], dtype=np.uint8)
                 cv2.fillPoly(class_label, [points], 1)
                 label[..., class_ind] = class_label
+<<<<<<< HEAD
 
+=======
+        else:
+            # No labels for test set
+            label = np.zeros((len(CLASSES), *image.shape[:2]), dtype=np.uint8)
+>>>>>>> main
         if self.transforms:
             inputs = {"image": image, "mask": label} if self.label_files else {"image": image}
             result = self.transforms(**inputs)
             image = result["image"]
             label = result["mask"] if self.label_files else label
+<<<<<<< HEAD
 
         image = image / 255.0
         image = torch.from_numpy(image.transpose(2, 0, 1)).float()
         label = torch.from_numpy(label.transpose(2, 0, 1)).float() if self.label_files else None
 
+=======
+        image = image / 255.0
+        image = torch.from_numpy(image.transpose(2, 0, 1)).float()
+        label = torch.from_numpy(label.transpose(2, 0, 1)).float() if self.label_files else None
+>>>>>>> main
         return (image_name, image, label) if label is not None else (image_name, image)

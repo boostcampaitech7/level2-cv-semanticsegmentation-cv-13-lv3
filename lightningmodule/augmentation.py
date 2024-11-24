@@ -83,6 +83,7 @@ def snapmix(image1, mask1, image2, mask2, beta=1.0):
 
     return mixed_image, mixed_mask
 
+<<<<<<< HEAD
 def copypaste(image, label):
     _, H, W = image.shape
 
@@ -115,6 +116,8 @@ class CopyPasteDataset(Dataset):
 
         return image_name, image, label
     
+=======
+>>>>>>> main
 def load_transforms(args):
     transform = [
         A.Resize(args.input_size, args.input_size),
@@ -145,7 +148,7 @@ def load_transforms(args):
         A.ColorJitter(brightness=(1.0, 1.0), contrast=(1.5, 1.5), hue=(0.0, 0.0), saturation=(0.0, 0.0), p=1.0)
     ]
     
-    if getattr(args, 'copypaste', False):
-        transform.append(A.Lambda(image=copypaste, mask=copypaste, p=0.5))
+    # if getattr(args, 'snapmix', False):
+    #     transform.append(SnapMixAugmentation(beta=1.0, probability=0.5, p=0.5))
 
     return A.Compose(transform)
