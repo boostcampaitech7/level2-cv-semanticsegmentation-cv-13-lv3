@@ -17,7 +17,7 @@ num_workers: 4
 
 lr: 1e-3
 
-input_size: 2048
+input_size: 1024
 max_epoch: 100
 valid_interval: 100
   

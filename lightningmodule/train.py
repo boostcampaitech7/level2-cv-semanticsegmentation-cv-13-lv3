@@ -33,6 +33,8 @@ class CustomModelCheckpoint(ModelCheckpoint):
         return f"{self.filename}-bestEp_{epoch_num}"
     
     def on_train_end(self, trainer, pl_module):
+        if not os.path.exists(self.dirpath):  
+            os.makedirs(self.dirpath, exist_ok=True)  
         # 학습이 모두 끝났을 때 전체 모델 저장
         model_path = os.path.join(self.dirpath, f"{self.filename}-final.pt")
         torch.save(pl_module, model_path)
