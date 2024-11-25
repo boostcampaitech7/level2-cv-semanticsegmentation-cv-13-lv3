@@ -130,9 +130,8 @@ def train_model(args):
     checkpoint_callback_best = CustomModelCheckpoint(
         dirpath=args.checkpoint_dir,
         filename=f"{args.checkpoint_file}",
-        monitor='val/dice',
-        mode='max',
-        save_top_k=3
+        save_top_k=3,
+        every_n_epochs=1
     )
 
     # 체크포인트 콜백 : resume 보조 마지막 학습 체크포인트 저장
