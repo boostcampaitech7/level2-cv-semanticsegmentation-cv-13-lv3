@@ -136,20 +136,12 @@ def train_model(args):
         save_top_k=1,
         every_n_epochs=1  # 매 에폭마다 저장
     )
-    
-    # # 체크포인트 콜백 : 모델간 앙상블을 위한 torch.save 전체 모델 저장
-    # checkpoint_callback_all = CustomModelCheckpointAll(
-    #     dirpath=args.checkpoint_dir,
-    #     filename=f"{args.checkpoint_file}",
-    #     save_top_k=1  # 모니터링 없이 가장 마지막 체크포인트만 저장
-    # )
 
     trainer = Trainer(
         logger=wandb_logger,
         log_every_n_steps=5,
         max_epochs=args.max_epoch,
         check_val_every_n_epoch=args.valid_interval,
-        #callbacks=[checkpoint_callback_best, checkpoint_callback_latest, checkpoint_callback_all],
         callbacks=[checkpoint_callback_best, checkpoint_callback_latest,],
         accelerator='gpu',
         devices=1 if torch.cuda.is_available() else None,
