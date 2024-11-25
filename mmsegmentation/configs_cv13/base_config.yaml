@@ -1,5 +1,5 @@
 checkpoint_dir: ./checkpoints
-checkpoint_file: segformer_18000.pth
+checkpoint_file: UPerNet_HRNet_18000.pth
 project_name: project4_mmseg_test
 
 #----------------------------------#
@@ -12,7 +12,7 @@ num_workers: 2
 
 lr: 6e-4
 
-input_size: 512
+input_size: 1024
 max_step: 20000
 valid_step: 2000
 
@@ -21,7 +21,7 @@ amp: True
 resume: True
 wandb_id: -1
 
-config: configs_cv13/segformer.py
+config: configs_cv13/UPerNet_HRNet.py
 
 auto_eval: True
 tta: False

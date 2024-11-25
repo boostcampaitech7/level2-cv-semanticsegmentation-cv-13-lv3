@@ -36,7 +36,8 @@ def set_xraydataset(args, config):
 
         _, valid_files = split_data(pngs, jsons)
 
-        image_files = valid_files['filenames']
+        image_files = np.array(pngs)
+        #valid_files['filenames']
     else:
         TEST_DATA_DIR = 'data/test'
 
