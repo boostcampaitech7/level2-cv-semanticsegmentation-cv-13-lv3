@@ -9,7 +9,6 @@ from glob import glob
 from skimage import measure
 from tqdm import tqdm
 
-
 def rle_decode(mask_rle, shape):
     s = mask_rle.split()
     starts, lengths = [np.asarray(x, dtype=int) for x in (s[0:][::2], s[1:][::2])]
@@ -145,7 +144,11 @@ def preprocess(
 
 
 if __name__ == '__main__':
-    with open('config.yaml', 'r') as file:
+    script_dir = os.path.dirname(os.path.abspath(__file__))  
+    config_path = os.path.join(script_dir, 'config.yaml')   
+
+    with open(config_path, 'r') as file:
         config = yaml.safe_load(file)
         
     root_path = config['DATA_ROOT']
+    print(f"Using root path: {root_path}")
