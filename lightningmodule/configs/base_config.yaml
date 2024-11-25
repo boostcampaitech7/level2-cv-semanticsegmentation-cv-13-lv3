@@ -7,12 +7,12 @@ project_name: Last_Dance_palm
 run_name: Palm
 
 architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
-encoder_name: efficientnet-b7
+encoder_name: tu-hrnet_w64
 encoder_weight: imagenet
 
 seed: 42
 
-batch_size: 2
+batch_size: 3
 num_workers: 4
 
 lr: 1e-3
@@ -23,7 +23,7 @@ valid_interval: 100
   
 amp: False
 
-use_cp: True
+use_cp: False
 cp_args:
  - Trapezium
  - Capitate

@@ -86,7 +86,7 @@ class SegmentationModel(LightningModule):
         #self.log('best_epoch', self.best_epoch, logger=True)
 
         # Log Dice scores per class using WandB logger
-        dice_scores_dict = {'val/' + c: d.item() for c, d in zip(CLASSES, dices_per_class)}
+        dice_scores_dict = {'val/' + c: d.item() for c, d in zip(PALM_CLASSES, dices_per_class)}
         self.log_dict(dice_scores_dict, on_epoch=True, logger=True)  # Log to WandB at the end of each epoch
 
         # 에폭이 끝나면 validation_dices 초기화
