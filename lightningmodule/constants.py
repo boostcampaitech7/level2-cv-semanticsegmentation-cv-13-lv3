@@ -9,7 +9,7 @@ CLASSES = [
 CLASS2IND = {v: i for i, v in enumerate(CLASSES)}
 IND2CLASS = {v: k for k, v in CLASS2IND.items()}
 
-TRAIN_DATA_DIR = '/data/ephemeral/home/data/train'
+TRAIN_DATA_DIR = '/data/ephemeral/home/from_CVAT3/train'
 TEST_DATA_DIR = '/data/ephemeral/home/data/test'
 
 PALM_CLASSES =  ['Hamate', 'Scaphoid', 'Lunate', 'Trapezium', 'Capitate', 'Triquetrum', 'Trapezoid', 'Pisiform']
