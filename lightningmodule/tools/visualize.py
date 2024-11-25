@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from xraydataset import XRayDataset, split_data
 from utils import get_sorted_files_by_type, label2rgb, decode_rle_to_mask
 
-from constants import TRAIN_DATA_DIR, CLASSES, PALETTE, TEST_DATA_DIR
+from constants import TRAIN_DATA_DIR, CLASSES, PALETTE
 
 from argparse import ArgumentParser
 
@@ -33,6 +33,8 @@ import datetime
 from augmentation import load_transforms
 from omegaconf import OmegaConf
 from argparse import ArgumentParser
+
+from augmentation import CopyPasteDataset
 
 def create_pred_mask_dict(csv_path, input_size):
     df = pd.read_csv(csv_path)
@@ -169,7 +171,7 @@ def draw_outline(image, label, is_binary = False):
 
     return image
 
-def visual_dataset(visual_loader, augmentation=False):
+def visualize_dataset(visual_loader, augmentation=False):
     save_dir = 'visualize/'
 
     if os.path.exists(save_dir):  
@@ -177,20 +179,17 @@ def visual_dataset(visual_loader, augmentation=False):
 
     os.makedirs(save_dir, exist_ok=True)    
 
-    img_num = 800
-    if augmentation:
-        img_num = 1
-        
-    for idx, (image_names, images, labels) in enumerate(visual_loader):
-        if idx >= img_num:
-            break
+    for image_names, images, labels in visual_loader:
         for image_name, image, label in zip(image_names, images, labels):
-            img, lbl = ready_for_visualize(image, label)
-            if augmentation:
-                img.save(os.path.join(save_dir, f"transform_{image_name}"))        
+            
+            lbl = label.numpy().astype(np.uint8)
+            img = image.permute(1, 2, 0).numpy()
+            img = (img * 255).astype(np.uint8)
+            
+            for i, class_label in enumerate(lbl):
+                img[class_label == 1] = PALETTE[i]
                 
-            img = draw_outline(img, lbl)
-
+            img = Image.fromarray(img)  # [C, H, W] -> [H, W, C]로 변환   
             img.save(os.path.join(save_dir, image_name))
 
 def parse_args():
@@ -233,10 +232,15 @@ def main():
             cfg = OmegaConf.load(f)
         transforms = load_transforms(cfg)
 
-    visualize_dataset = XRayDataset(image_files=image_files, label_files=label_files, transforms=transforms)
-
+    visual_dataset = XRayDataset(
+        image_files=image_files, 
+        label_files=label_files, 
+        transforms=transforms, 
+        use_cp=True, 
+        cp_args=['Trapezium', 'Capitate', 'Lunate', 'Scaphoid', 'finger-1', 'finger-16', 'Pisiform', 'Hamate', 'Triquetrum'])
+                               
     visual_loader = DataLoader(
-        dataset=visualize_dataset, 
+        dataset=visual_dataset, 
         batch_size=8,
         shuffle=False,
         num_workers=1,
@@ -244,7 +248,7 @@ def main():
     )
 
     if args.local:
-        visual_dataset(visual_loader, args.augmentation)
+        visualize_dataset(visual_loader, args.augmentation)
     else:
         mask_dict = None
         if args.csv is not None:

@@ -4,7 +4,7 @@ resume_checkpoint_suffix: -latest  # Resume 전용 체크포인트 접미사: -l
 project_name: Last_Dance
 
 #----------------------------------#
-run_name: custom_scheduler
+run_name: copy_paste
 
 architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
 encoder_name: efficientnet-b7
@@ -22,3 +22,15 @@ max_epoch: 100
 valid_interval: 100
   
 amp: False
+
+use_cp: True
+cp_args:
+ - Trapezium
+ - Capitate
+ - Lunate 
+ - Scaphoid 
+ - finger-1 
+ - finger-16 
+ - Pisiform 
+ - Hamate 
+ - Triquetrum
