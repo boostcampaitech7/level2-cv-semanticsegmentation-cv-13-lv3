@@ -1,11 +1,13 @@
 checkpoint_dir: ./checkpoints
-checkpoint_file: fcn_resnet50_best_model.pt
+checkpoint_file: Model_Encoder_Best
 resume_checkpoint_suffix: -latest  # Resume 전용 체크포인트 접미사: -latest, -bestEp_00, None, ...
-project_name: project4_test_run
+project_name: Last_Dance
 
 #----------------------------------#
-run_name: Palm image with CLAHE
+run_name: 이름 지어주세요~~
 
+architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
+encoder_name: efficientnet-b7
 architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
 encoder_name: efficientnet-b7
 encoder_weight: imagenet
@@ -17,11 +19,8 @@ num_workers: 4
 
 lr: 1e-3
 
-input_size: 512
-max_epoch: 5
+input_size: 2048
+max_epoch: 100
 valid_interval: 5
-clahe: true
-clahe_clip_limit: 2.0
-clahe_tile_grid_size: [8, 8]
-
-amp: True
+  
+amp: False

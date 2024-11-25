@@ -2,6 +2,7 @@
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from xraydataset import XRayDataset, split_data
+from snapmix import SnapMixDataset
 from utils import get_sorted_files_by_type, set_seed, Gsheet_param
 from constants import TRAIN_DATA_DIR
 from argparse import ArgumentParser, Namespace
@@ -13,8 +14,9 @@ from omegaconf import OmegaConf
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
+from augmentation import load_transforms
 from test import test_model  # 테스트 함수 임포트
-from augmentation import CLAHEAugmentation
+from loss import *
 
 class CustomModelCheckpoint(ModelCheckpoint):
     def __init__(self, *args, **kwargs):
@@ -26,7 +28,6 @@ class CustomModelCheckpoint(ModelCheckpoint):
 
         # 파일 이름 형식 지정 (에폭 번호만 포함, val/dice 제거)
         return f"{self.filename}-bestEp_{epoch_num}"
-
 
 # 모델 학습과 검증을 수행하는 함수
 def train_model(args):
@@ -68,26 +69,23 @@ def train_model(args):
     jsons = get_sorted_files_by_type(label_root, 'json')
     train_files, valid_files = split_data(pngs, jsons)
     
-    clahe_clip_limit = args.clahe_clip_limit
-    clahe_tile_grid_size = tuple(args.clahe_tile_grid_size)
-    
-    train_transforms = [A.Resize(args.input_size, args.input_size)]
-    if args.clahe:
-        print(f"Using CLAHE augmentation with clipLimit={clahe_clip_limit}, tileGridSize={clahe_tile_grid_size}")
-        clahe_aug = CLAHEAugmentation(clip_limit=clahe_clip_limit, tile_grid_size=clahe_tile_grid_size)
-        train_transforms.append(clahe_aug.albumentations_clahe())
-        
-    train_transforms = A.Compose(train_transforms)
-    
-    train_dataset = XRayDataset(
+    transforms = load_transforms(args)
+    base_train_dataset = XRayDataset(
         image_files=train_files['filenames'],
         label_files=train_files['labelnames'],
-        transforms = train_transforms
+        transforms=transforms
+    )   
+
+    train_dataset = SnapMixDataset(
+        base_dataset=base_train_dataset,
+        beta=args.snapmix.beta,  
+        probability=args.snapmix.probability  
     )
+    
     valid_dataset = XRayDataset(
         image_files=valid_files['filenames'],
         label_files=valid_files['labelnames'],
-        transforms=A.Resize(args.input_size, args.input_size)
+        transforms=transforms,
     )
     train_loader = DataLoader(
         dataset=train_dataset, 
@@ -106,8 +104,9 @@ def train_model(args):
         drop_last=False
     )
 
-    # 모델 및 Trainer 설정
-    criterion = nn.BCEWithLogitsLoss()
+
+
+    criterion = calc_dice_loss()
     seg_model = SegmentationModel(
         criterion=criterion,
         learning_rate=args.lr,
@@ -163,6 +162,9 @@ if __name__ == '__main__':
     parser.add_argument("--resume", action="store_true", help="resume으로 실행할 건지")
     parser.add_argument("--wandb_id", type=str, default=None, help="resume 할 때 WandB에서 기존 실험에 이어서 기록하게 wandb id")
     parser.add_argument("--auto_eval", action="store_true", help="학습 끝나고 자동으로 test 실행")
+    parser.add_argument("--snapmix", action="store_true", help="SnapMix 활성화")
+    parser.add_argument("--snapmix_beta", type=float, default=1.0, help="SnapMix beta 값")
+    parser.add_argument("--snapmix_prob", type=float, default=0.5, help="SnapMix 적용 확률")
     
     args = parser.parse_args()
     with open(args.config, 'r') as f:
@@ -171,6 +173,11 @@ if __name__ == '__main__':
     cfg.resume = args.resume
     cfg.wandb_id = args.wandb_id
     cfg.auto_eval = args.auto_eval
+    cfg.snapmix.enabled = args.snapmix
+    if args.snapmix_beta is not None:
+        cfg.snapmix.beta = args.snapmix_beta
+    if args.snapmix_prob is not None:
+        cfg.snapmix.probability = args.snapmix_prob
     
     train_model(cfg)
     Gsheet_param(cfg)

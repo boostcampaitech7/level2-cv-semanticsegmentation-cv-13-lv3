@@ -3,6 +3,7 @@ from constants import CLASSES, CLASS2IND
 import numpy as np
 import os
 import cv2
+import random
 
 import torch
 import json
@@ -53,44 +54,34 @@ class XRayDataset(Dataset):
         self.image_files = image_files
         self.label_files = label_files  # Optional for test set without labels
         self.transforms = transforms
-    
     def __len__(self):
         return len(self.image_files)
-    
     def __getitem__(self, item):
         image_path = self.image_files[item]
         image_name = os.path.basename(image_path)
-
-        image = cv2.imread(image_path)
-        image = image / 255.0
-        
+        image = cv2.imread(image_path).astype(np.float32)
         if self.label_files:
             label_path = self.label_files[item]
             label_shape = tuple(image.shape[:2]) + (len(CLASSES), )
             label = np.zeros(label_shape, dtype=np.uint8)
-            
             with open(label_path, "r") as f:
                 annotations = json.load(f)["annotations"]
-
             for ann in annotations:
                 c = ann["label"]
                 class_ind = CLASS2IND[c]
                 points = np.array(ann["points"])
-                
                 class_label = np.zeros(image.shape[:2], dtype=np.uint8)
                 cv2.fillPoly(class_label, [points], 1)
                 label[..., class_ind] = class_label
         else:
             # No labels for test set
             label = np.zeros((len(CLASSES), *image.shape[:2]), dtype=np.uint8)
-        
         if self.transforms:
             inputs = {"image": image, "mask": label} if self.label_files else {"image": image}
             result = self.transforms(**inputs)
             image = result["image"]
             label = result["mask"] if self.label_files else label
-
+        image = image / 255.0
         image = torch.from_numpy(image.transpose(2, 0, 1)).float()
         label = torch.from_numpy(label.transpose(2, 0, 1)).float() if self.label_files else None
-
         return (image_name, image, label) if label is not None else (image_name, image)
