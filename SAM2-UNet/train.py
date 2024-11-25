@@ -15,6 +15,7 @@ from lightning.pytorch.loggers import WandbLogger
 from test import test_model  # 테스트 함수 임포트
 
 
+# 체크포인트 콜백 클래스 : 체크포인트에 에폭 이름 달아주는 거
 class CustomModelCheckpoint(ModelCheckpoint):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -25,6 +26,29 @@ class CustomModelCheckpoint(ModelCheckpoint):
 
         # 파일 이름 형식 지정 (에폭 번호만 포함, val/dice 제거)
         return f"{self.filename}-bestEp_{epoch_num}"
+
+
+# 체크포인트 콜백 클래스 : torch.save로 전체 모델 저장
+class CustomModelCheckpointAll(ModelCheckpoint):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.best_val_dice = float('-inf')  # 최고 성능을 추적
+
+    def on_validation_end(self, trainer, pl_module):
+        metrics = trainer.callback_metrics
+        current_val_dice = metrics.get("val/dice", None)
+        
+        # val/dice가 최고점일 때 전체 모델 저장
+        if current_val_dice is not None and current_val_dice > self.best_val_dice:
+            self.best_val_dice = current_val_dice
+            
+            # 전체 모델 저장
+            model_path = os.path.join(self.dirpath, f"{self.filename}-all.pt")
+            torch.save(pl_module, model_path)
+            print(f"New best All model saved at: {model_path}")
+        
+        # 기존 체크포인트 로직 유지
+        super().on_validation_end(trainer, pl_module)
 
 
 def train_model(args):
@@ -123,6 +147,15 @@ def train_model(args):
         save_top_k=1,
         every_n_epochs=1  # 매 에폭마다 저장
     )
+    
+    # 체크포인트 콜백 : 모델간 앙상블을 위한 전체 모델 저장, val/dice 최고점인 것만
+    checkpoint_callback_all = CustomModelCheckpointAll(
+    dirpath=args.checkpoint_dir,
+    filename=f"{args.checkpoint_file}",
+    monitor='val/dice',
+    mode='max',
+    save_top_k=1
+    )
 
     
     # Trainer 설정
@@ -130,7 +163,7 @@ def train_model(args):
         max_epochs=args.max_epoch,
         accelerator="gpu",
         devices=1 if torch.cuda.is_available() else None,
-        callbacks=[checkpoint_callback_best, checkpoint_callback_latest],
+        callbacks=[checkpoint_callback_best, checkpoint_callback_latest, checkpoint_callback_all],
         logger=wandb_logger,
         log_every_n_steps=5,
         precision="16-mixed" if args.amp else 32,
