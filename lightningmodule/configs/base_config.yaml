@@ -1,5 +1,6 @@
 checkpoint_dir: ./checkpoints
 checkpoint_file: UPerNet_BCE_IOU
+resume_checkpoint_suffix: -latest  # Resume 전용 체크포인트 접미사: -latest, -bestEp_00, None, ...
 project_name: LossTest
 
 #----------------------------------#
@@ -7,20 +8,27 @@ run_name: IOU+DICE(0.5)
 
 architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
 encoder_name: efficientnet-b7
+architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
+encoder_name: efficientnet-b7
 encoder_weight: imagenet
 
 seed: 42
 
-batch_size: 8
-num_workers: 8
+batch_size: 4
+num_workers: 4
 
-lr: 1e-4
+lr: 1e-3
 
 input_size: 512
 max_epoch: 100
 valid_interval: 5
-clahe: False
-clahe_clip_limit: 2.0
-clahe_tile_grid_size: [8, 8]
+clahe: true
+clahe_clip_limit: 4.0
+clahe_tile_grid_size: [4, 4]
 
+snapmix:
+  enabled: true  
+  beta: 1.0     
+  probability: 0.5 
+  
 amp: True

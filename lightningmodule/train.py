@@ -2,6 +2,7 @@
 import torch.nn as nn
 from torch.utils.data import DataLoader
 from xraydataset import XRayDataset, split_data
+from snapmix import SnapMixDataset
 from utils import get_sorted_files_by_type, set_seed, Gsheet_param
 from constants import TRAIN_DATA_DIR
 from argparse import ArgumentParser, Namespace
@@ -13,8 +14,8 @@ from omegaconf import OmegaConf
 from lightning.pytorch import Trainer, seed_everything
 from lightning.pytorch.callbacks import ModelCheckpoint
 from lightning.pytorch.loggers import WandbLogger
+from augmentation import load_transforms
 from test import test_model  # 테스트 함수 임포트
-from augmentation import CLAHEAugmentation
 from loss import calc_loss
 
 class CustomModelCheckpoint(ModelCheckpoint):
@@ -28,7 +29,6 @@ class CustomModelCheckpoint(ModelCheckpoint):
         # 파일 이름 형식 지정 (에폭 번호만 포함, val/dice 제거)
         return f"{self.filename}-bestEp_{epoch_num}"
 
-
 # 모델 학습과 검증을 수행하는 함수
 def train_model(args):
     args_dict = OmegaConf.to_container(args, resolve=True)
@@ -37,8 +37,21 @@ def train_model(args):
     seed_everything(args.seed)
     set_seed(args.seed)
 
-    # 체크포인트 경로 설정
-    checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}.ckpt")
+    # resume 체크포인트 경로 지정
+    if args.resume_checkpoint_suffix == None:
+        resume_checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}.ckpt")
+    else:
+        resume_checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}{args.resume_checkpoint_suffix}.ckpt")
+        
+    if args.resume:
+        # Resume 설정 확인
+        if os.path.exists(resume_checkpoint_path):
+            print(f"Resume : <{resume_checkpoint_path}> 체크포인트에서 학습 재개")
+        else:
+            raise FileNotFoundError(f"Resume : 체크포인트가 존재하지 않음 <{resume_checkpoint_path}>")
+    else:
+        resume_checkpoint_path = None
+        print("No Resume : 새로운 학습 시작")
 
     # WandB 설정
     wandb_logger = WandbLogger(
@@ -56,27 +69,23 @@ def train_model(args):
     jsons = get_sorted_files_by_type(label_root, 'json')
     train_files, valid_files = split_data(pngs, jsons)
     
-    clahe_clip_limit = args.clahe_clip_limit
-    clahe_tile_grid_size = tuple(args.clahe_tile_grid_size)
-    
-    train_transforms = [A.Resize(args.input_size, args.input_size)]
-    if args.clahe:
-        print(f"Using CLAHE augmentation with clipLimit={clahe_clip_limit}, tileGridSize={clahe_tile_grid_size}")
-        clahe_aug = CLAHEAugmentation(clip_limit=clahe_clip_limit, tile_grid_size=clahe_tile_grid_size)
-        train_transforms.append(clahe_aug.albumentations_clahe())
-        
-    train_transforms = A.Compose(train_transforms)
-    
-    train_dataset = XRayDataset(
+    transforms = load_transforms(args)
+    base_train_dataset = XRayDataset(
         image_files=train_files['filenames'],
         label_files=train_files['labelnames'],
-        transforms=train_transforms
+        transforms=transforms
+    )   
+
+    train_dataset = SnapMixDataset(
+        base_dataset=base_train_dataset,
+        beta=args.snapmix.beta,  
+        probability=args.snapmix.probability  
     )
     
     valid_dataset = XRayDataset(
         image_files=valid_files['filenames'],
         label_files=valid_files['labelnames'],
-        transforms=A.Resize(args.input_size, args.input_size)
+        transforms=transforms,
     )
     train_loader = DataLoader(
         dataset=train_dataset, 
@@ -138,7 +147,7 @@ def train_model(args):
     trainer.fit(seg_model, 
                 train_dataloaders=train_loader, 
                 val_dataloaders=valid_loader,
-                ckpt_path=checkpoint_path if args.resume else None  # 체크포인트 경로 전달
+                ckpt_path=resume_checkpoint_path if args.resume else None  # 체크포인트 경로 전달
                 )
     
     # 학습 종료 후 테스트 수행
@@ -152,6 +161,9 @@ if __name__ == '__main__':
     parser.add_argument("--resume", action="store_true", help="resume으로 실행할 건지")
     parser.add_argument("--wandb_id", type=str, default=None, help="resume 할 때 WandB에서 기존 실험에 이어서 기록하게 wandb id")
     parser.add_argument("--auto_eval", action="store_true", help="학습 끝나고 자동으로 test 실행")
+    parser.add_argument("--snapmix", action="store_true", help="SnapMix 활성화")
+    parser.add_argument("--snapmix_beta", type=float, default=1.0, help="SnapMix beta 값")
+    parser.add_argument("--snapmix_prob", type=float, default=0.5, help="SnapMix 적용 확률")
     
     args = parser.parse_args()
     with open(args.config, 'r') as f:
@@ -160,6 +172,11 @@ if __name__ == '__main__':
     cfg.resume = args.resume
     cfg.wandb_id = args.wandb_id
     cfg.auto_eval = args.auto_eval
+    cfg.snapmix.enabled = args.snapmix
+    if args.snapmix_beta is not None:
+        cfg.snapmix.beta = args.snapmix_beta
+    if args.snapmix_prob is not None:
+        cfg.snapmix.probability = args.snapmix_prob
     
     train_model(cfg)
     Gsheet_param(cfg)

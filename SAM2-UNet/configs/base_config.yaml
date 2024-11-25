@@ -1,0 +1,20 @@
+checkpoint_dir: ./checkpoints/test5
+checkpoint_file: SAM2Unet_test
+resume_checkpoint_suffix: -latest  # Resume 전용 체크포인트 접미사: -latest, -bestEp_00, None, ...
+project_name: SAM2Unet_test
+
+#----------------------------------#
+run_name: test 5
+
+seed: 42
+
+batch_size: 4
+num_workers: 4
+
+learning_rate: 1e-4
+
+max_epoch: 100
+input_size: 1024
+valid_interval: 5
+
+amp: True

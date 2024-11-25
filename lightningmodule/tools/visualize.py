@@ -30,6 +30,10 @@ import pandas as pd
 
 import datetime
 
+from augmentation import load_transforms
+from omegaconf import OmegaConf
+from argparse import ArgumentParser
+
 def create_pred_mask_dict(csv_path, input_size):
     df = pd.read_csv(csv_path)
 
@@ -165,7 +169,7 @@ def draw_outline(image, label, is_binary = False):
 
     return image
 
-def visual_dataset(visual_loader):
+def visual_dataset(visual_loader, augmentation=False):
     save_dir = 'visualize/'
 
     if os.path.exists(save_dir):  
@@ -173,10 +177,18 @@ def visual_dataset(visual_loader):
 
     os.makedirs(save_dir, exist_ok=True)    
 
-    for image_names, images, labels in visual_loader:
+    img_num = 800
+    if augmentation:
+        img_num = 1
+        
+    for idx, (image_names, images, labels) in enumerate(visual_loader):
+        if idx >= img_num:
+            break
         for image_name, image, label in zip(image_names, images, labels):
             img, lbl = ready_for_visualize(image, label)
-
+            if augmentation:
+                img.save(os.path.join(save_dir, f"transform_{image_name}"))        
+                
             img = draw_outline(img, lbl)
 
             img.save(os.path.join(save_dir, image_name))
@@ -190,7 +202,9 @@ def parse_args():
     parser.add_argument("--local", action="store_true", help="save aug into local")
     parser.add_argument("--csv", type=str, default=None)
     parser.add_argument("--name", type=str, default="compare_mask")
-
+    parser.add_argument("--augmentation", action="store_true", help="augmentation visualize")
+    parser.add_argument("--config", type=str, default="../configs/base_config.yaml")
+    
     args = parser.parse_args()
 
     return args
@@ -212,7 +226,14 @@ def main():
     else: # 모든 train에 대한 업로드를 진행
         image_files, label_files = np.array(pngs), jsons
 
-    visualize_dataset = XRayDataset(image_files=image_files, label_files=label_files, transforms=A.Resize(args.input_size, args.input_size))
+    transforms = A.Resize(args.input_size, args.input_size)
+    if args.augmentation:
+        print("Augmentation Visualize")
+        with open(args.config, 'r') as f:
+            cfg = OmegaConf.load(f)
+        transforms = load_transforms(cfg)
+
+    visualize_dataset = XRayDataset(image_files=image_files, label_files=label_files, transforms=transforms)
 
     visual_loader = DataLoader(
         dataset=visualize_dataset, 
@@ -223,7 +244,7 @@ def main():
     )
 
     if args.local:
-        visual_dataset(visual_loader)
+        visual_dataset(visual_loader, args.augmentation)
     else:
         mask_dict = None
         if args.csv is not None:

@@ -1,80 +1,69 @@
+import sys
 import os
-import shutil
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.append(parent_dir)
 import json
+from constants import CLASSES, CLASS2IND
+from utils import get_sorted_files_by_type
 
-# 반복문 사용: toSegFormat이 좀 복잡해지므로 일단 보류 - 불편해지면 돌아오겠읍니다.
+def segFormat_to_datu(json_path):
+    with open(json_path, 'r') as f:
+        # 원래 라벨 매핑 생성
+        json_data = json.load(f)
+        annotations = json_data["annotations"]
+        labels = [{"name": CLASSES[i], "parent": "", "attributes": []} for i in range(len(CLASSES))]
+        label_map = {label["name"]: idx for idx, label in enumerate(labels)}
 
-name = 'image1664935962797'
-image_root = '../train/DCM'
-json_root = '../train/outputs_json/'
+        # items와 annotations 변환
+        items = {
+            "id": os.path.join(json_path.split('/')[-2], json_data["filename"].split(".")[0]),
+            "annotations": [
+                {
+                    "id": idx,
+                    "type": "polygon",
+                    "attributes": {"occluded": False},  # 기본 속성
+                    "group": 0,
+                    "label_id": CLASS2IND[anno["label"]],
+                    "points": [coord for point in anno["points"] for coord in point],
+                    "z_order": 0
+                }
+                for idx, anno in enumerate(annotations)
+            ],
+            # 원본의 추가 정보 포함
+            "attributes": json_data["attributes"],
+            "last_workers": json_data["last_workers"],
+            "attr": {"frame": 0},
+            "point_cloud": {"path": ""}
+        }
 
+        # 변환된 JSON 구조 생성
+        datu_json = {
+            "info": {},  # info는 비어있음
+            "categories": {
+                "label": {"labels": labels, "attributes": ["occluded"]},
+                "points": {"items": []}
+            },
+            "items": [items]          ################## 여러 파일에 대한 annotations 여기에 무한 append
+        }
 
-# segFormat to datu
-def segFormat_to_datu_with_metadata(data_json):
-    # 원래 라벨 매핑 생성
-    annotations = data_json["annotations"]
-    labels = [{"name": anno["label"], "parent": "", "attributes": []} for anno in annotations]
-    label_map = {label["name"]: idx for idx, label in enumerate(labels)}
+        return datu_json
+
+if __name__ == '__main__':
+    경로 = './hobbang/annotations'
     
-    # items와 annotations 변환
-    items = {
-        "id": data_json["filename"].split(".")[0],
-        "annotations": [
-            {
-                "id": idx,
-                "type": "polygon",
-                "attributes": {"occluded": False},  # 기본 속성
-                "group": 0,
-                "label_id": label_map[anno["label"]],
-                "points": [coord for point in anno["points"] for coord in point],
-                "z_order": 0
-            }
-            for idx, anno in enumerate(annotations)
-        ],
-        # 원본의 추가 정보 포함
-        "metadata": data_json["metadata"],
-        "attributes": data_json["attributes"],
-        "last_workers": data_json["last_workers"],
-        "attr": {"frame": 0},
-        "point_cloud": {"path": ""},
-        "original_ids": {idx:anno["id"] for idx, anno in enumerate(annotations)}
-    }
+    jsons_path = get_sorted_files_by_type('./base_processed', 'json')
+    pngs_path = get_sorted_files_by_type('./base_processed', 'png')
+
+    all_data = None
+    for path in jsons_path:
+        if all_data == None:
+            all_data = segFormat_to_datu(path)
+        else:
+            json_data = segFormat_to_datu(path)
+            all_data['items'].append(json_data['items'][0])
     
-    # 변환된 JSON 구조 생성
-    datu_json = {
-        "info": {},  # info는 비어있음
-        "categories": {
-            "label": {"labels": labels, "attributes": ["occluded"]},
-            "points": {"items": []}
-        },
-        "items": [items]
-    }
-    
-    return datu_json
+    os.makedirs(경로, exist_ok=False)
 
-IDs = os.listdir(image_root)
-id = None
-for i in IDs:
-    path = os.listdir(os.path.join(image_root, i))
-    if name+'.png' in path:
-        # print(path)
-        # print(i)
-        id = i
-        break
-
-os.makedirs(os.path.join('CVAT', id, 'png'), exist_ok=True)
-os.makedirs(os.path.join('CVAT', id, 'annotations'), exist_ok=True)
-shutil.copyfile(os.path.join(image_root, id, name+'.png'), os.path.join('CVAT', id, 'png', name+'.png'))
-shutil.copyfile(os.path.join(json_root, id, name+'.json'), os.path.join('CVAT', id, 'annotations', name+'.json'))
-
-annot_path = os.path.join('CVAT', id, 'annotations', name+'.json')
-# annot_path
-
-# 변환 및 저장
-with open(annot_path, "r") as file:
-    data_json = json.load(file)
-
-datu_json = segFormat_to_datu_with_metadata(data_json)
-
-with open(annot_path, "w") as file:
-    json.dump(datu_json, file, indent=4)
+    with open(os.path.join(경로, './hihi.json'), "w") as file:
+        json.dump(all_data, file, indent=4)

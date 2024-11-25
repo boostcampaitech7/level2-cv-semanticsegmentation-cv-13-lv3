@@ -1,0 +1,86 @@
+project_name: yolo
+
+#----------------------------------#
+run_name: yolov11x-seg
+
+wandb_option:
+  project: instance seg
+  entity: SuperHitomi
+  name: yolov11x-seg
+
+train_option:
+  epochs: 100              # 학습 에폭 수
+  imgsz: 2048              # 입력 이미지 크기
+  device: 0                # 사용할 GPU 장치 번호
+  batch: 1                 # 배치 크기
+  workers: 8               # DataLoader에 사용할 워커 수
+  cos_lr: True             # Cosine Annealing Learning Rate 사용 여부
+  optimizer: auto          # 최적화 알고리즘 (auto = 기본 설정 사용)
+
+path: /data/ephemeral/home/data  # 데이터셋 루트 디렉토리
+train: yolo_train/images         # 훈련 이미지 경로 (path 기준 상대 경로)
+val: yolo_valid/images           # 검증 이미지 경로 (path 기준 상대 경로)
+test:                            # 테스트 이미지 경로 (선택 사항)
+
+DATA_ROOT: "/data/ephemeral/home/data"  # 데이터 루트 경로
+CLASSES:                               # 클래스 이름
+  - finger-1
+  - finger-2
+  - finger-3
+  - finger-4
+  - finger-5
+  - finger-6
+  - finger-7
+  - finger-8
+  - finger-9
+  - finger-10
+  - finger-11
+  - finger-12
+  - finger-13
+  - finger-14
+  - finger-15
+  - finger-16
+  - finger-17
+  - finger-18
+  - finger-19
+  - Trapezium
+  - Trapezoid
+  - Capitate
+  - Hamate
+  - Scaphoid
+  - Lunate
+  - Triquetrum
+  - Pisiform
+  - Radius
+  - Ulna
+
+names:                             # 클래스 인덱스에 따른 이름
+  0: finger-1
+  1: finger-2
+  2: finger-3
+  3: finger-4
+  4: finger-5
+  5: finger-6
+  6: finger-7
+  7: finger-8
+  8: finger-9
+  9: finger-10
+  10: finger-11
+  11: finger-12
+  12: finger-13
+  13: finger-14
+  14: finger-15
+  15: finger-16
+  16: finger-17
+  17: finger-18
+  18: finger-19
+  19: Trapezium
+  20: Trapezoid
+  21: Capitate
+  22: Hamate
+  23: Scaphoid
+  24: Lunate
+  25: Triquetrum
+  26: Pisiform
+  27: Radius
+  28: Ulna
