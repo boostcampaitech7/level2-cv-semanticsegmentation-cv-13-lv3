@@ -133,10 +133,9 @@ class SegmentationModel(LightningModule):
 
     def configure_optimizers(self):  
         # Optimizer 정의
-        optimizer = optim.Adam(params=self.model.parameters(), lr=self.lr, weight_decay=1e-6)
-        #scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=5, eta_min=1e-6)
-
-        return optimizer
+        optimizer = optim.AdamW(params=self.model.parameters(), lr=self.lr, weight_decay=1e-4)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=1e-5)
         
-      #  옵티마이저와 스케줄러 반환
+        # 옵티마이저와 스케줄러 반환
         return [optimizer], [scheduler]
+    

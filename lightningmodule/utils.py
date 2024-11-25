@@ -42,7 +42,8 @@ def Gsheet_param(cfg):
     param_dict['user'] = os.path.abspath(__file__).split("/")[4]
 
     for idx, (key, value) in enumerate(cfg.items()):
-        if idx < 3:
+        if idx < 4:
+
             pass
         else :
             param_dict[key] = str(value)
@@ -147,7 +148,7 @@ def get_sorted_files_by_type(path,file_type='json'):
     current_dir = os.getcwd()  # 현재 작업 디렉토리 기준으로 상대 경로 생성
     files = {
         os.path.relpath(os.path.join(root, fname), start=current_dir)
-        for root, _dirs, files in os.walk(path)
+        for root, _dirs, files in os.walk(path, followlinks=True) # 심볼릭 링크를 쓰는 폴더를 탐색하기 위한 followlinks 파라미터
         for fname in files
         if os.path.splitext(fname)[1].lower() == '.' + file_type
     }

@@ -1,9 +1,10 @@
 checkpoint_dir: ./checkpoints
 checkpoint_file: UPerNet_Eff7_cropped-bestEp_98
-project_name: Crop_image
+resume_checkpoint_suffix: -latest  # Resume 전용 체크포인트 접미사: -latest, -bestEp_00, None, ...
+project_name: Last_Dance_Palm
 
 #----------------------------------#
-run_name: crop_img
+run_name: palm
 
 architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
 encoder_name: efficientnet-b7
@@ -11,20 +12,25 @@ encoder_weight: imagenet
 
 seed: 42
 
-batch_size: 4
+batch_size: 2
 num_workers: 4
 
-lr: 1e-4
+lr: 1e-3
 
 input_size: 1024
-max_epoch: 2
-valid_interval: 5
-clahe: true
-clahe_clip_limit: 2.0
-clahe_tile_grid_size: [8, 8]
-valid: True
+max_epoch: 100
+valid_interval: 100
+  
+amp: False
 
-
-amp: True
-
-standard_csv_path: standard_valid.csv
+use_cp: True
+cp_args:
+ - Trapezium
+ - Capitate
+ - Lunate 
+ - Scaphoid 
+ - finger-1 
+ - finger-16 
+ - Pisiform 
+ - Hamate 
+ - Triquetrum
