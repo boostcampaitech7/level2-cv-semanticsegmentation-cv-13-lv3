@@ -6,6 +6,8 @@ import torch.nn.functional as F
 from lightning import LightningModule
 from utils import dice_coef, encode_mask_to_rle
 
+from new_scheduler import CosineAnnealingWarmUpRestarts
+
 import os
 import pandas as pd
 
@@ -17,11 +19,14 @@ class SegmentationModel(LightningModule):
         self.save_hyperparameters(ignore=['criterion'])  # criterion은 제외
         self.model = load_model(architecture, encoder_name, encoder_weight)
         self.criterion = criterion
-        self.lr = learning_rate
         self.thr = thr
         self.best_dice = 0.0
         self.best_epoch = -1   # Best Epoch 초기화
         self.validation_dices = []  # validation_step 출력을 저장할 리스트
+
+                # 주기 설정
+                
+        self.lr = learning_rate
 
         self.rles = []
         self.filename_and_class = []
@@ -126,13 +131,10 @@ class SegmentationModel(LightningModule):
         
     def on_train_epoch_end(self):
         self.log('epoch', self.current_epoch)  # 에폭 번호를 로그로 기록
-
-
-    def configure_optimizers(self):  
-        # Optimizer 정의
-        optimizer = optim.AdamW(params=self.model.parameters(), lr=self.lr, weight_decay=1e-4)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=1e-5)
-        
-        # 옵티마이저와 스케줄러 반환
-        return [optimizer], [scheduler]
     
+    def configure_optimizers(self):
+        # Optimizer 정의
+        optimizer = optim.Adam(params=self.model.parameters(), lr=0)
+        scheduler = CosineAnnealingWarmUpRestarts(optimizer, T_0=25, T_mult=1, eta_max=self.lr,  T_up=3, gamma=0.5)
+
+        return [optimizer], [scheduler]
