@@ -5,6 +5,10 @@ wandb/
 visualize/
 CVAT/
 /SAM2-UNet/pretrained/
+/ensemble/checkpoint/
+/ensemble/soft_ensemble/
+
+
 # Generated and compiled files
 *.pyc
 *.o
