@@ -1,5 +1,11 @@
 import os
 import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'lightningmodule'))
+from model_lightning import SegmentationModel
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'mmsegmentation'))
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'SAM2-UNet'))
+
 import cv2
 import torch
 import argparse
@@ -16,6 +22,7 @@ from torch.utils.data import Dataset, DataLoader
 import warnings
 warnings.filterwarnings('ignore')
 
+#from model_lightning import SegmentationModel
 
 class EnsembleDataset(Dataset):
     """
@@ -221,6 +228,14 @@ def soft_voting(cfg):
                 for name, models in model_dict.items():
                     for model in models:
                         outputs = model(image_dict[name].to(device))
+                        
+                        #디버깅
+                        #print(f"Debug: outputs type={type(outputs)}, outputs={outputs}")
+                        
+                        # outputs가 tuple인 경우 첫 번째 요소만 선택
+                        if isinstance(outputs, tuple):
+                            outputs = outputs[0]
+                        
                         outputs = F.interpolate(outputs, size=(2048, 2048), mode="bilinear")
                         outputs = torch.sigmoid(outputs)
                         total_output += outputs
