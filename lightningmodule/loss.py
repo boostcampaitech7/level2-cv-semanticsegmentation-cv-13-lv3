@@ -62,7 +62,7 @@ def iou_loss(inputs, targets, smooth=1):
     IoU = (intersection + smooth)/(union + smooth)
     return 1 - IoU
 
-class calc_loss(nn.Module):
+class calc_iou_loss(nn.Module):
     def __init__(self, bce_weight=0.5):
         super().__init__()
         self.bce_weight = bce_weight
@@ -77,5 +77,23 @@ class calc_loss(nn.Module):
         
         # 가중치를 적용한 최종 loss
         loss = bce * self.bce_weight + iou * (1 - self.bce_weight)
+        
+        return loss
+
+class calc_dice_loss(nn.Module):
+    def __init__(self, bce_weight=0.5):
+        super().__init__()
+        self.bce_weight = bce_weight
+
+    def forward(self, inputs, targets):
+        # BCE loss 계산
+        bce = F.binary_cross_entropy_with_logits(inputs, targets)
+        
+        # Dice loss 계산을 위해 sigmoid 적용
+        pred = F.sigmoid(inputs)
+        dice = dice_loss(pred, targets)
+        
+        # 가중치를 적용한 최종 loss
+        loss = bce * self.bce_weight + dice * (1 - self.bce_weight)
         
         return loss
