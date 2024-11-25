@@ -6,6 +6,7 @@ def load_model(architecture, encoder_name, encoder_weight):
 
     model_architectures = {
         "Unet": smp.Unet,
+        "Unet++": smp.UnetPlusPlus,
         "UperNet": smp.UPerNet,
         "DeepLabV3": smp.DeepLabV3,
         "DeepLabV3Plus": smp.DeepLabV3Plus,

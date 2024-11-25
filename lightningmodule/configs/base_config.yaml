@@ -1,10 +1,10 @@
 checkpoint_dir: ./checkpoints
-checkpoint_file: Model_Encoder_Best
+checkpoint_file: standard-UperNet-effb7
 resume_checkpoint_suffix: -latest  # Resume 전용 체크포인트 접미사: -latest, -bestEp_00, None, ...
 project_name: Last_Dance
 
 #----------------------------------#
-run_name: copy_paste
+run_name: standard
 
 architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
 encoder_name: efficientnet-b7
@@ -23,7 +23,7 @@ valid_interval: 100
   
 amp: False
 
-use_cp: True
+use_cp: False
 cp_args:
  - Trapezium
  - Capitate
