@@ -71,10 +71,15 @@ def train_model(args):
     jsons = get_sorted_files_by_type(label_root, 'json')
     
     transforms = load_transforms(args)
+    
+    print(args.cp_args)
+    
     train_dataset = XRayDataset(
         image_files=np.array(pngs),
         label_files=jsons,
-        transforms=transforms
+        transforms=transforms,
+        use_cp=args.use_cp,
+        cp_args=args.cp_args
     )   
     
     # valid_dataset = XRayDataset(
