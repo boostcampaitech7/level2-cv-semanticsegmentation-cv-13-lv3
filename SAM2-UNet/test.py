@@ -15,12 +15,17 @@ from omegaconf import OmegaConf
 # 테스트를 수행하는 함수
 def test_model(args):
 
-    if args.resume_checkpoint_suffix == None:
-        checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}.ckpt")
+    if args.pt:
+        pt_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}-final.pt")
+        seg_model = torch.load(pt_path)  # 전체 모델 저장된 경우
     else:
-        checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}{args.resume_checkpoint_suffix}.ckpt")
-    
-    seg_model = SegmentationModel.load_from_checkpoint(checkpoint_path=checkpoint_path, criterion=None, learning_rate=None)
+        # 모델 및 체크포인트 경로 설정
+        if args.resume_checkpoint_suffix == None:
+            checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}.ckpt")
+        else:
+            checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}{args.resume_checkpoint_suffix}.ckpt")
+        seg_model = SegmentationModel.load_from_checkpoint(checkpoint_path=checkpoint_path, criterion=None, learning_rate=None)
+
 
     # 데이터 로드 및 테스트
     image_root = os.path.join(TEST_DATA_DIR, 'DCM')
@@ -43,10 +48,14 @@ def test_model(args):
 
 if __name__ == '__main__':
     parser = ArgumentParser()
-    parser.add_argument(
-        "--config", type=str, default="configs/base_config.yaml"
-    )
+    parser.add_argument("--config", type=str, default="configs/base_config.yaml")
+    parser.add_argument("--pt", action="store_true", help="pt 파일 test 실행")
+    
     args = parser.parse_args()
+    
     with open(args.config, 'r') as f:
         cfg = OmegaConf.load(f)
+    
+    cfg.pt = args.pt
+    
     test_model(cfg)

@@ -17,9 +17,10 @@ from lightning.pytorch.loggers import WandbLogger
 from augmentation import load_transforms
 from test import test_model  # 테스트 함수 임포트
 from loss import *
-
 import numpy as np
 
+
+# 체크포인트 콜백 클래스 : ckpt에 bestEp 저장 + 학습 종료시 torch.save로 pt 저장
 class CustomModelCheckpoint(ModelCheckpoint):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -30,6 +31,15 @@ class CustomModelCheckpoint(ModelCheckpoint):
 
         # 파일 이름 형식 지정 (에폭 번호만 포함, val/dice 제거)
         return f"{self.filename}-bestEp_{epoch_num}"
+    
+    def on_train_end(self, trainer, pl_module):
+        # 학습이 모두 끝났을 때 전체 모델 저장
+        model_path = os.path.join(self.dirpath, f"{self.filename}-final.pt")
+        torch.save(pl_module, model_path)
+        print(f"Final model saved at: {model_path}")
+
+        super().on_train_end(trainer, pl_module)
+
 
 # 모델 학습과 검증을 수행하는 함수
 def train_model(args):
@@ -105,7 +115,6 @@ def train_model(args):
     # )
 
 
-
     criterion = calc_dice_loss()
     seg_model = SegmentationModel(
         criterion=criterion,
@@ -128,6 +137,7 @@ def train_model(args):
     checkpoint_callback_latest = ModelCheckpoint(
         dirpath=args.checkpoint_dir,
         filename=args.checkpoint_file + "-latest",
+        monitor=None,
         save_top_k=1,
         every_n_epochs=1  # 매 에폭마다 저장
     )
@@ -137,11 +147,10 @@ def train_model(args):
         log_every_n_steps=5,
         max_epochs=args.max_epoch,
         check_val_every_n_epoch=args.valid_interval,
-        callbacks=[checkpoint_callback_best, checkpoint_callback_latest],
+        callbacks=[checkpoint_callback_best, checkpoint_callback_latest,],
         accelerator='gpu',
         devices=1 if torch.cuda.is_available() else None,
         precision="16-mixed" if args.amp else 32,
-        #resume_from_checkpoint=checkpoint_path  # 체크포인트에서 학습 재개
     )
 
     # 학습 시작
