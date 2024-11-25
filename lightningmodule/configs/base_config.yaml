@@ -4,9 +4,9 @@ resume_checkpoint_suffix: -latest  # Resume 전용 체크포인트 접미사: -l
 project_name: Last_Dance_palm
 
 #----------------------------------#
-run_name: Palm
+run_name: Palm_unet_hrnet
 
-architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
+architecture: Unet++                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
 encoder_name: tu-hrnet_w64
 encoder_weight: imagenet
 
@@ -17,7 +17,7 @@ num_workers: 4
 
 lr: 1e-3
 
-input_size: 1024
+input_size: 2048
 max_epoch: 100
 valid_interval: 100
   

@@ -38,7 +38,7 @@ def test_model(args):
 
         image_files = np.array(pngs)
 
-    test_dataset = XRayDataset(image_files=image_files, transforms=A.Resize(2048,2048))  # 원하는 입력 크기로 조정
+    test_dataset = XRayDataset(image_files=image_files, transforms=A.Normalize(normalization='min_max', p=1.0))  # 원하는 입력 크기로 조정)  # 원하는 입력 크기로 조정
     test_loader = DataLoader(
         dataset=test_dataset,
         batch_size=8,
