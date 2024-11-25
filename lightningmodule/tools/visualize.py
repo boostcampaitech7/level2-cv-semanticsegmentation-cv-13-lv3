@@ -9,7 +9,7 @@ from torch.utils.data import DataLoader
 from xraydataset import XRayDataset, split_data
 from utils import get_sorted_files_by_type, label2rgb, decode_rle_to_mask
 
-from constants import TRAIN_DATA_DIR, CLASSES, PALETTE
+from constants import TRAIN_DATA_DIR, CLASSES, PALETTE, TEST_DATA_DIR
 
 from argparse import ArgumentParser
 
@@ -29,12 +29,6 @@ import wandb
 import pandas as pd
 
 import datetime
-
-from augmentation import load_transforms
-from omegaconf import OmegaConf
-from argparse import ArgumentParser
-
-from augmentation import CopyPasteDataset
 
 def create_pred_mask_dict(csv_path, input_size):
     df = pd.read_csv(csv_path)
@@ -176,7 +170,7 @@ def draw_outline(image, label, is_binary = False):
 
     return image
 
-def visualize_dataset(visual_loader, augmentation=False):
+def visual_dataset(visual_loader):
     save_dir = 'visualize/'
 
     if os.path.exists(save_dir):  
@@ -186,15 +180,10 @@ def visualize_dataset(visual_loader, augmentation=False):
 
     for image_names, images, labels in visual_loader:
         for image_name, image, label in zip(image_names, images, labels):
-            
-            lbl = label.numpy().astype(np.uint8)
-            img = image.permute(1, 2, 0).numpy()
-            img = (img * 255).astype(np.uint8)
-            
-            for i, class_label in enumerate(lbl):
-                img[class_label == 1] = PALETTE[i]
-                
-            img = Image.fromarray(img)  # [C, H, W] -> [H, W, C]로 변환   
+            img, lbl = ready_for_visualize(image, label)
+
+            img = draw_outline(img, lbl)
+
             img.save(os.path.join(save_dir, image_name))
 
 def parse_args():
@@ -206,9 +195,7 @@ def parse_args():
     parser.add_argument("--local", action="store_true", help="save aug into local")
     parser.add_argument("--csv", type=str, default=None)
     parser.add_argument("--name", type=str, default="compare_mask")
-    parser.add_argument("--augmentation", action="store_true", help="augmentation visualize")
-    parser.add_argument("--config", type=str, default="../configs/base_config.yaml")
-    
+
     args = parser.parse_args()
 
     return args
@@ -230,22 +217,10 @@ def main():
     else: # 모든 train에 대한 업로드를 진행
         image_files, label_files = np.array(pngs), jsons
 
-    transforms = A.Resize(args.input_size, args.input_size)
-    if args.augmentation:
-        print("Augmentation Visualize")
-        with open(args.config, 'r') as f:
-            cfg = OmegaConf.load(f)
-        transforms = load_transforms(cfg)
+    visualize_dataset = XRayDataset(image_files=image_files, label_files=label_files, transforms=A.Resize(args.input_size, args.input_size))
 
-    visual_dataset = XRayDataset(
-        image_files=image_files, 
-        label_files=label_files, 
-        transforms=transforms, 
-        use_cp=True, 
-        cp_args=['Trapezium', 'Capitate', 'Lunate', 'Scaphoid', 'finger-1', 'finger-16', 'Pisiform', 'Hamate', 'Triquetrum'])
-                               
     visual_loader = DataLoader(
-        dataset=visual_dataset, 
+        dataset=visualize_dataset, 
         batch_size=8,
         shuffle=False,
         num_workers=1,
@@ -253,7 +228,7 @@ def main():
     )
 
     if args.local:
-        visualize_dataset(visual_loader, args.augmentation)
+        visual_dataset(visual_loader)
     else:
         mask_dict = None
         if args.csv is not None:

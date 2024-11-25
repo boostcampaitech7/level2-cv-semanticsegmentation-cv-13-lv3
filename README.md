@@ -44,7 +44,7 @@ Bone Segmentation은 인공지능 분야에서 중요한 응용 분야 중 하�
             <br />
         </td>
         <td align="center" width="150px">
-            <a href="https://github.com/Jin-SukKim"><img height="80px"  src="https://github.com/user-attachments/assets/f15196cd-96fa-404c-b418-dc84e5ced92a"/></a>
+            <a href="https://github.com/Jin-SukKim"><img height="80px"  src="https://github.com/Eddie-JUB/Portfolio/assets/71426994/2829c82d-ecc8-49fd-9cb3-ae642fbe7513"/></a>
             <br/>
             <a href="https://github.com/Jin-SukKim"><strong>김진석</strong></a>
             <br />

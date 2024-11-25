@@ -4,7 +4,12 @@ lightning_logs/
 wandb/
 visualize/
 CVAT/
-/SAM2-UNet/pretrained/
+__pycache__/
+checkpoints/
+lightning_logs/
+wandb/
+visualize/
+CVAT/
 # Generated and compiled files
 *.pyc
 *.o
@@ -67,6 +72,3 @@ saved_models/
 reference/
 pths/
 Segmentation/
-
-# temp
-*.out
