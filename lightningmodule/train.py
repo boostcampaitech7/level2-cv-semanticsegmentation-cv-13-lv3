@@ -17,6 +17,8 @@ from lightning.pytorch.loggers import WandbLogger
 from augmentation import load_transforms
 from test import test_model  # 테스트 함수 임포트
 from loss import *
+import numpy as np
+
 
 # 체크포인트 콜백 클래스 : 체크포인트에 에폭 이름 달아주는 거
 class CustomModelCheckpoint(ModelCheckpoint):
@@ -90,42 +92,35 @@ def train_model(args):
     label_root = os.path.join(TRAIN_DATA_DIR, 'outputs_json')
     pngs = get_sorted_files_by_type(image_root, 'png')
     jsons = get_sorted_files_by_type(label_root, 'json')
-    train_files, valid_files = split_data(pngs, jsons)
     
     transforms = load_transforms(args)
-    base_train_dataset = XRayDataset(
-        image_files=train_files['filenames'],
-        label_files=train_files['labelnames'],
+    train_dataset = XRayDataset(
+        image_files=np.array(pngs),
+        label_files=jsons,
         transforms=transforms
     )   
-
-    train_dataset = SnapMixDataset(
-        base_dataset=base_train_dataset,
-        beta=args.snapmix.beta,  
-        probability=args.snapmix.probability  
-    )
     
-    valid_dataset = XRayDataset(
-        image_files=valid_files['filenames'],
-        label_files=valid_files['labelnames'],
-        transforms=transforms,
-    )
+    # valid_dataset = XRayDataset(
+    #     image_files=valid_files['filenames'],
+    #     label_files=valid_files['labelnames'],
+    #     transforms=transforms,
+    # )
     train_loader = DataLoader(
         dataset=train_dataset, 
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=args.num_workers,
-        drop_last=True,
+        drop_last=False,
     )
       
-    # 주의: validation data는 이미지 크기가 크기 때문에 `num_wokers`는 커지면 메모리 에러가 발생할 수 있습니다.
-    valid_loader = DataLoader(
-        dataset=valid_dataset, 
-        batch_size=2,
-        shuffle=False,
-        num_workers=7,
-        drop_last=False
-    )
+    # # 주의: validation data는 이미지 크기가 크기 때문에 `num_wokers`는 커지면 메모리 에러가 발생할 수 있습니다.
+    # valid_loader = DataLoader(
+    #     dataset=valid_dataset, 
+    #     batch_size=2,
+    #     shuffle=False,
+    #     num_workers=7,
+    #     drop_last=False
+    # )
 
 
 
@@ -179,7 +174,7 @@ def train_model(args):
     # 학습 시작
     trainer.fit(seg_model, 
                 train_dataloaders=train_loader, 
-                val_dataloaders=valid_loader,
+                # val_dataloaders=valid_loader,
                 ckpt_path=resume_checkpoint_path if args.resume else None  # 체크포인트 경로 전달
                 )
     
@@ -194,9 +189,6 @@ if __name__ == '__main__':
     parser.add_argument("--resume", action="store_true", help="resume으로 실행할 건지")
     parser.add_argument("--wandb_id", type=str, default=None, help="resume 할 때 WandB에서 기존 실험에 이어서 기록하게 wandb id")
     parser.add_argument("--auto_eval", action="store_true", help="학습 끝나고 자동으로 test 실행")
-    parser.add_argument("--snapmix", action="store_true", help="SnapMix 활성화")
-    parser.add_argument("--snapmix_beta", type=float, default=1.0, help="SnapMix beta 값")
-    parser.add_argument("--snapmix_prob", type=float, default=0.5, help="SnapMix 적용 확률")
     
     args = parser.parse_args()
     with open(args.config, 'r') as f:
@@ -205,11 +197,6 @@ if __name__ == '__main__':
     cfg.resume = args.resume
     cfg.wandb_id = args.wandb_id
     cfg.auto_eval = args.auto_eval
-    cfg.snapmix.enabled = args.snapmix
-    if args.snapmix_beta is not None:
-        cfg.snapmix.beta = args.snapmix_beta
-    if args.snapmix_prob is not None:
-        cfg.snapmix.probability = args.snapmix_prob
     
     train_model(cfg)
     Gsheet_param(cfg)
