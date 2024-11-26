@@ -152,3 +152,9 @@ if __name__ == '__main__':
         
     root_path = config['DATA_ROOT']
     print(f"Using root path: {root_path}")
+    
+    output_csv_path = os.path.join(root_path, 'output.csv') 
+    if os.path.exists(output_csv_path):
+        preprocess(root_path, output_csv_path)
+    else:
+        print(f"Error: {output_csv_path} does not exist. Please provide a valid CSV file.")
