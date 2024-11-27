@@ -255,7 +255,7 @@ def soft_voting(cfg):
 
 if __name__=="__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, default="soft_voting_setting.yaml")
+    parser.add_argument("--config", type=str, default="configs/soft_voting_setting_OG.yaml")
 
     args = parser.parse_args()
     
