@@ -3,9 +3,13 @@ import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'lightningmodule'))
 from model_lightning import SegmentationModel
+from model_lightning_palm import SegmentationModel_palm
+from utils import encode_mask_to_rle, decode_rle_to_mask, label2rgb
+from xraydataset import XRayDataset
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'mmsegmentation'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'SAM2-UNet'))
 
+import json
 import cv2
 import torch
 import argparse
@@ -22,247 +26,325 @@ from torch.utils.data import Dataset, DataLoader
 import warnings
 warnings.filterwarnings('ignore')
 
-#from model_lightning import SegmentationModel
 
-class EnsembleDataset(Dataset):
+CLASSES = [
+    'finger-1', 'finger-2', 'finger-3', 'finger-4', 'finger-5',
+    'finger-6', 'finger-7', 'finger-8', 'finger-9', 'finger-10',
+    'finger-11', 'finger-12', 'finger-13', 'finger-14', 'finger-15',
+    'finger-16', 'finger-17', 'finger-18', 'finger-19', 'Trapezium',
+    'Trapezoid', 'Capitate', 'Hamate', 'Scaphoid', 'Lunate',
+    'Triquetrum', 'Pisiform', 'Radius', 'Ulna',
+]
+PALM_CLASSES =  ['Hamate', 'Scaphoid', 'Lunate', 'Trapezium', 'Capitate', 'Triquetrum', 'Trapezoid', 'Pisiform']
+
+# 크롭 정보를 로드하는 함수
+def load_crop_info(crop_info_path):
     """
-    Soft Voting을 위한 DataSet 클래스입니다. 이 클래스는 이미지를 로드하고 전처리하는 작업과
-    구성 파일에서 지정된 변환을 적용하는 역할을 수행합니다.
-
+    crop_info.json 파일을 로드하여 딕셔너리로 반환합니다.
     Args:
-        fnames (set) : 로드할 이미지 파일 이름들의 set
-        cfg (dict) : 이미지 루트 및 클래스 레이블 등 설정을 포함한 구성 객체
-        tf_dict (dict) : 이미지에 적용할 Resize 변환들의 dict
-    """    
-    def __init__(self, fnames, cfg, tf_dict):
-        self.fnames = np.array(sorted(fnames))
-        self.image_root = cfg.image_root
-        self.tf_dict = tf_dict
-        self.ind2class = {i : v for i, v in enumerate(cfg.CLASSES)}
+        crop_info_path (str): crop_info.json 파일 경로
+    Returns:
+        dict: 크롭 정보를 담고 있는 딕셔너리
+    """
+    with open(crop_info_path, 'r') as f:
+        crop_info = json.load(f)
+    return crop_info
 
-    def __len__(self):
-        return len(self.fnames)
-    
-    def __getitem__(self, item):
+# 데이터셋 클래스 정의
+class EnsembleDataset(Dataset):
+    def __init__(self, image_root, cfg):
         """
-        지정된 인덱스에 해당하는 이미지를 로드하여 반환합니다.
+        소프트 보팅 앙상블을 위한 데이터셋 클래스.
         Args:
-            item (int): 로드할 이미지의 index
+            image_root (str): 이미지가 저장된 루트 경로
+            cfg (dict): 설정 파일
+        """
+        self.image_root = image_root
+        self.image_files = self._get_all_image_files(image_root)
+        self.cfg = cfg
+        
+    def _get_all_image_files(self, root_dir):
+        """
+        하위 폴더를 포함하여 모든 이미지 파일 경로를 반환합니다.
+        Args:
+            root_dir (str): 루트 디렉토리
 
         Returns:
-            dict : "image", "image_name"을 키값으로 가지는 dict
-        """        
-        image_name = self.fnames[item]
-        image_path = osp.join(self.image_root, image_name)
-        image = cv2.imread(image_path)
+            list: 이미지 파일 경로 목록
+        """
+        image_files = []
+        for root, _, files in os.walk(root_dir):
+            for file in files:
+                if file.endswith(('.png', '.jpg', '.jpeg')):
+                    image_files.append(os.path.join(root, file))
+        return sorted(image_files)
 
-        assert image is not None, f"{image_path} 해당 이미지를 찾지 못했습니다."
+    def __len__(self):
+        return len(self.image_files)
+
+    def __getitem__(self, idx):
+        """
+        주어진 인덱스의 이미지를 로드하고 반환합니다.
+        """
+        image_name = self.image_files[idx]
+        image_path = os.path.join(self.image_root, image_name)
         
-        image = image / 255.0
-        return {"image" : image, "image_name" : image_name}
+        # 이미지 로드
+        image = cv2.imread(image_path)
+        if image is None:
+            raise FileNotFoundError(f"[ERROR] 이미지 파일을 로드할 수 없습니다: {image_path}")
+        
+        image = image.astype(np.float32) / 255.0
+        return {"images": image, "image_names": image_name}
 
     def collate_fn(self, batch):
         """
-        배치 데이터를 처리하는 커스텀 collate 함수입니다.
-
-        Args:
-            batch (list): __getitem__에서 반환된 데이터들의 list
-
-        Returns:
-            dict: 처리된 이미지들을 가지는 dict
-            list: 이미지 이름으로 구성된 list
-        """        
-        images = [data['image'] for data in batch]
-        image_names = [data['image_name'] for data in batch]
-        inputs = {"images" : images}
-
-        image_dict = self._apply_transforms(inputs)
-
-        image_dict = {k : torch.from_numpy(v.transpose(0, 3, 1, 2)).float()
-                      for k, v in image_dict.items()}
-        
-        for image_size, image_batch in image_dict.items():
-            assert len(image_batch.shape) == 4, \
-                f"collate_fn 내부에서 image_batch의 차원은 반드시 4차원이어야 합니다.\n \
-                현재 shape : {image_batch.shape}"
-            assert image_batch.shape == (len(batch), 3, image_size, image_size), \
-                f"collate_fn 내부에서 image_batch의 shape은 ({len(batch)}, 3, {image_size}, {image_size})이어야 합니다.\n \
-                현재 shape : {image_batch.shape}"
-
-        return image_dict, image_names
-    
-    def _apply_transforms(self, inputs):
+        배치 데이터를 생성하는 함수입니다.
         """
-        입력된 이미지에 변환을 적용합니다.
+        images = [data["images"] for data in batch]
+        image_names = [data["image_names"] for data in batch]
+        images = torch.tensor(images).permute(0, 3, 1, 2)
+        return {"images": images, "image_names": image_names}
 
-        Args:
-            inputs (dict): 변환할 이미지를 포함하는 딕셔너리
-
-        Returns:
-            dict : 변환된 이미지들
-        """        
-        return {
-            key: np.array(pipeline(**inputs)['images']) for key, pipeline in self.tf_dict.items()
-        }
-
-
-def encode_mask_to_rle(mask):
-    # mask map으로 나오는 인퍼런스 결과를 RLE로 인코딩 합니다.
-    pixels = mask.flatten()
-    pixels = np.concatenate([[0], pixels, [0]])
-    runs = np.where(pixels[1:] != pixels[:-1])[0] + 1
-    runs[1::2] -= runs[::2]
-    return ' '.join(str(x) for x in runs)
-
-def load_models(cfg, device):
+# 크롭 데이터를 복원하는 함수
+def restore_cropped_outputs(crop_info, cropped_outputs, original_shape):
     """
-    구성 파일에 지정된 경로에서 모델을 로드합니다.
-
+    크롭된 출력을 원본 이미지 크기로 복원합니다.
     Args:
-        cfg (dict): 모델 경로가 포함된 설정 객체
-        device (torch.device): 모델을 로드할 장치 (CPU or GPU)
-
+        crop_info (dict): 크롭 정보 (min, max 좌표 포함)
+        cropped_outputs (np.ndarray): 크롭된 출력
+        original_shape (tuple): 원본 이미지의 크기
     Returns:
-        dict: 처리 이미지 크기별로 모델을 그룹화한 dict
-        int: 로드된 모델의 총 개수
-    """    
-    model_dict = {}
-    model_count = 0
+        np.ndarray: 원본 크기로 복원된 출력
+    """
+    restored = np.zeros(original_shape, dtype=np.float32)
+    for class_idx, coords in crop_info.items():
+        if coords:
+            min_y, min_x = coords['min']
+            max_y, max_x = coords['max']
+            restored[min_y:max_y, min_x:max_x] = cropped_outputs[class_idx]
+    return restored
 
-    print("\n======== Model Load ========")
-    # inference 해야하는 이미지 크기 별로 모델 순차저장
-    for key, paths in cfg.model_paths.items():
-        if len(paths) == 0:
-            continue
-        model_dict[key] = []
-        print(f"{key} image size 추론 모델 {len(paths)}개 불러오기 진행 시작")
-        for path in paths:
-            print(f"{osp.basename(path)} 모델을 불러오는 중입니다..", end="\t")
-            model = torch.load(path).to(device)
-            model.eval()
-            model_dict[key].append(model)
-            model_count += 1
-            print("불러오기 성공!")
-        print()
-
-    print(f"모델 총 {model_count}개 불러오기 성공!\n")
-    return model_dict, model_count
-
-
+# 결과를 저장하는 함수
 def save_results(cfg, filename_and_class, rles):
     """
-    추론 결과를 csv 파일로 저장합니다.
-
+    추론 결과를 CSV 파일로 저장합니다.
     Args:
-        cfg (dict): 출력 설정을 포함하는 구성 객체
-        filename_and_class (list): 파일 이름과 클래스 레이블이 포함된 list
-        rles (list): RLE로 인코딩된 세크멘테이션 마스크들을 가진 list
-    """    
-    classes, filename = zip(*[x.split("_") for x in filename_and_class])
-    image_name = [os.path.basename(f) for f in filename]
-
-    df = pd.DataFrame({
-        "image_name": image_name,
-        "class": classes,
-        "rle": rles,
-    })
-
-    print("\n======== Save Output ========")
-    print(f"{cfg.save_dir} 폴더 내부에 {cfg.output_name}을 생성합니다..", end="\t")
+        cfg (dict): 설정 파일
+        filename_and_class (list): 파일 이름 및 클래스 정보 리스트
+        rles (list): RLE로 인코딩된 세그멘테이션 마스크 리스트
+    """
+    import pandas as pd
+    save_path = os.path.join(cfg.save_dir, cfg.output_name)
+    
+    # 디렉토리 없으면 생성
     os.makedirs(cfg.save_dir, exist_ok=True)
 
-    output_path = osp.join(cfg.save_dir, cfg.output_name)
-    try:
-        df.to_csv(output_path, index=False)
-    except Exception as e:
-        print(f"{output_path}를 생성하는데 실패하였습니다.. : {e}")
-        raise
+    # 결과 데이터프레임 생성
+    results = pd.DataFrame({
+        "filename_class": filename_and_class,
+        "rle": rles
+    })
+    results.to_csv(save_path, index=False)
+    print(f"결과가 {save_path}에 저장되었습니다.")
 
-    print(f"{osp.join(cfg.save_dir, cfg.output_name)} 생성 완료")
-
-
-
+# 소프트 보팅 함수
 def soft_voting(cfg):
-    """
-    Soft Voting을 수행합니다. 여러 모델의 예측을 결합하여 최종 예측을 생성
-
-    Args:
-        cfg (dict): 설정을 포함하는 구성 객체
-    """    
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
 
-    fnames = {
-        osp.relpath(osp.join(root, fname), start=cfg.image_root)
-        for root, _, files in os.walk(cfg.image_root)
-        for fname in files
-        if osp.splitext(fname)[1].lower() == ".png"
-    }
+    # Palm 모델 로드
+    palm_models = []
+    if cfg.palm_model_paths:
+        palm_models = [
+            torch.load(path).to(device).eval()
+            for path in cfg.palm_model_paths
+        ]
+        print(f"{len(palm_models)}개의 Palm 모델이 로드되었습니다.")
+    else:
+        print("Palm 모델이 제공되지 않았습니다. Palm 모델 추론을 건너뜁니다.")
 
-    tf_dict = {image_size : A.Resize(height=image_size, width=image_size) 
-               for image_size, paths in cfg.model_paths.items() 
-               if len(paths) != 0}
-    
-    print("\n======== PipeLine 생성 ========")
-    for k, v in tf_dict.items():
-        print(f"{k} 사이즈는 {v} pipeline으로 처리됩니다.")
+    # 일반 모델 로드
+    general_models = []
+    if cfg.smp_model_paths:
+        general_models = [
+            torch.load(path).to(device).eval()
+            for path in cfg.smp_model_paths
+        ]
+        print(f"{len(general_models)}개의 일반 모델이 로드되었습니다.")
+    else:
+        print("일반 모델이 제공되지 않았습니다. 일반 모델 추론을 건너뜁니다.")
 
-    dataset = EnsembleDataset(fnames, cfg, tf_dict)
-    
-    data_loader = DataLoader(dataset=dataset,
-                             batch_size=cfg.batch_size,
-                             shuffle=False,
-                             num_workers=cfg.num_workers,
-                             drop_last=False,
-                             collate_fn=dataset.collate_fn)
+    # 모델이 하나도 없는 경우 예외 처리
+    if not palm_models and not general_models:
+        raise ValueError("모델이 제공되지 않았습니다. `palm_model_paths`와 `smp_model_paths`가 모두 비어 있습니다.")
 
-    model_dict, model_count = load_models(cfg, device)
-    
-    filename_and_class = []
-    rles = []
+    # 크롭 정보 로드
+    crop_info = load_crop_info(cfg.crop_info_path)
 
-    print("======== Soft Voting Start ========")
-    with torch.no_grad():
-        with tqdm(total=len(data_loader), desc="[Inference...]", disable=False) as pbar:
-            for image_dict, image_names in data_loader:
-                total_output = torch.zeros((cfg.batch_size, len(cfg.CLASSES), 2048, 2048)).to(device)
-                for name, models in model_dict.items():
-                    for model in models:
-                        outputs = model(image_dict[name].to(device))
-                        
-                        #디버깅
-                        #print(f"Debug: outputs type={type(outputs)}, outputs={outputs}")
-                        
-                        # outputs가 tuple인 경우 첫 번째 요소만 선택
-                        if isinstance(outputs, tuple):
-                            outputs = outputs[0]
-                        
-                        outputs = F.interpolate(outputs, size=(2048, 2048), mode="bilinear")
-                        outputs = torch.sigmoid(outputs)
-                        total_output += outputs
-                        
-                total_output /= model_count
-                total_output = (total_output > cfg.threshold).detach().cpu().numpy()
+    # 데이터 로드
+    dataset = EnsembleDataset(cfg.image_root, cfg)
+    data_loader = DataLoader(
+        dataset,
+        batch_size=cfg.batch_size,
+        collate_fn=dataset.collate_fn
+    )
 
-                for output, image_name in zip(total_output, image_names):
-                    for c, segm in enumerate(output):
-                        rle = encode_mask_to_rle(segm)
+    palm_weight = float(cfg.get("palm_weight", 0.5))
+    general_weight = float(cfg.get("smp_weight", 0.5))
+    print(f"[INFO] Palm Weight: {palm_weight}, SMP Weight: {general_weight}")
+
+    # 가중치 합 검증
+    if not abs(palm_weight + general_weight - 1.0) < 1e-6:
+        raise ValueError("Palm 모델과 일반 모델의 가중치 합이 1이 아닙니다.")
+
+    # `prediction_save`가 False인 경우
+    if not cfg.get("prediction_save", True):
+        print("[INFO] Prediction 저장을 건너뛰고 바로 앙상블을 진행합니다.")
+        filename_and_class = []
+        rles = []
+
+        with torch.no_grad():
+            for batch_idx, batch in enumerate(data_loader):
+                images, image_names = batch["images"].to(device), batch["image_names"]
+
+                # Palm 모델 추론 및 복원
+                palm_outputs_restored = {cls: torch.zeros((len(images), 2048, 2048)).to(device) for cls in PALM_CLASSES}
+                for palm_model in palm_models:
+                    palm_outputs = palm_model(images)
+                    for i, image_name in enumerate(image_names):
+                        crop_infos = crop_info.get(image_name, {})
+                        if crop_infos:
+                            restored = restore_cropped_outputs(crop_infos, palm_outputs[i].cpu().numpy(), (2048, 2048))
+                            for class_name, restored_output in restored.items():
+                                palm_outputs_restored[class_name][i] += torch.tensor(restored_output).to(device)
+
+                if palm_models:
+                    for class_name in palm_outputs_restored:
+                        palm_outputs_restored[class_name] /= len(palm_models)
+
+                # 일반 모델 추론
+                general_outputs = {cls: torch.zeros((len(images), 2048, 2048)).to(device) for cls in CLASSES}
+                for general_model in general_models:
+                    outputs = general_model(images)
+                    for idx, class_name in enumerate(CLASSES):
+                        general_outputs[class_name] += outputs[:, idx, :, :]
+
+                if general_models:
+                    for class_name in general_outputs:
+                        general_outputs[class_name] /= len(general_models)
+
+                # 클래스별 결합 및 Threshold 적용
+                for class_idx, class_name in enumerate(CLASSES):
+                    if class_name in PALM_CLASSES:
+                        palm_output = palm_outputs_restored[class_name]
+                        combined_output = (
+                            palm_weight * palm_output
+                            + general_weight * general_outputs[class_name]
+                        )
+                    else:
+                        combined_output = general_outputs[class_name]
+
+                    threshold = cfg.class_thresholds[class_idx]
+                    binary_output = (combined_output > threshold).float()
+
+                    for img_idx, segm in enumerate(binary_output):
+                        rle = encode_mask_to_rle(segm.cpu().numpy())
                         rles.append(rle)
-                        filename_and_class.append(f"{dataset.ind2class[c]}_{image_name}")
-                
-                pbar.update(1)
+                        filename_and_class.append(f"{class_name}_{image_names[img_idx]}")
 
-    save_results(cfg, filename_and_class, rles)
+        # 최종 결과 저장
+        save_results(cfg, filename_and_class, rles)
+        return  # 저장 없이 바로 종료
 
-if __name__=="__main__":
+    # 저장 관련 로직 (prediction_save가 True일 때만 실행)
+    if cfg.get("prediction_save", True):
+        # Save or Save_Load 모드
+        if cfg.mode in ["save", "save_load"]:
+            print("[INFO] Prediction 저장을 시작합니다!")
+            os.makedirs(cfg.save_dir, exist_ok=True)  # 저장 디렉토리 생성
+            for batch_idx, batch in enumerate(data_loader):
+                images, image_names = batch["images"].to(device), batch["image_names"]
+
+                # Palm 모델 추론 및 복원
+                palm_outputs_restored = {cls: torch.zeros((len(images), 2048, 2048)).to(device) for cls in PALM_CLASSES}
+                for palm_model in palm_models:
+                    palm_outputs = palm_model(images)
+                    for i, image_name in enumerate(image_names):
+                        crop_infos = crop_info.get(image_name, {})
+                        if crop_infos:
+                            restored = restore_cropped_outputs(crop_infos, palm_outputs[i].cpu().numpy(), (2048, 2048))
+                            for class_name, restored_output in restored.items():
+                                palm_outputs_restored[class_name][i] += torch.tensor(restored_output).to(device)
+
+                if palm_models:
+                    for class_name in palm_outputs_restored:
+                        palm_outputs_restored[class_name] /= len(palm_models)
+
+                # 일반 모델 추론
+                general_outputs = {cls: torch.zeros((len(images), 2048, 2048)).to(device) for cls in CLASSES}
+                for general_model in general_models:
+                    outputs = general_model(images)
+                    for idx, class_name in enumerate(CLASSES):
+                        general_outputs[class_name] += outputs[:, idx, :, :]
+
+                if general_models:
+                    for class_name in general_outputs:
+                        general_outputs[class_name] /= len(general_models)
+
+                # 클래스별 결합 및 저장
+                for class_idx, class_name in enumerate(CLASSES):
+                    if class_name in PALM_CLASSES:
+                        palm_output = palm_outputs_restored[class_name]
+                        combined_output = (
+                            palm_weight * palm_output
+                            + general_weight * general_outputs[class_name]
+                        )
+                    else:
+                        combined_output = general_outputs[class_name]
+
+                    # 저장 경로 설정
+                    save_path = os.path.join(
+                        cfg.save_dir,
+                        f"{cfg.prediction_file}_batch{batch_idx}_class{class_idx}.pt"
+                    )
+                    os.makedirs(os.path.dirname(save_path), exist_ok=True)  # 디렉토리 생성
+                    torch.save(combined_output.cpu(), save_path)
+                    print(f"Batch {batch_idx}, Class {class_name} predictions saved at {save_path}")
+
+        # Load or Save_Load 모드
+        if cfg.mode in ["load", "save_load"]:
+            print("[INFO] Prediction 불러오기를 시작합니다!")
+            all_combined_outputs = []
+            for batch_idx in range(len(data_loader)):
+                for class_idx, class_name in enumerate(CLASSES):
+                    batch_load_path = os.path.join(
+                        cfg.save_dir,
+                        f"{cfg.prediction_file}_batch{batch_idx}_class{class_idx}.pt"
+                    )
+                    class_output = torch.load(batch_load_path)
+                    all_combined_outputs.append((class_name, class_output))
+
+            # Threshold 적용 및 최종 결과 처리
+            filename_and_class = []
+            rles = []
+            for class_name, class_output in all_combined_outputs:
+                threshold = cfg.class_thresholds[CLASSES.index(class_name)]
+                binary_output = (class_output > threshold).float()
+
+                for image_idx, segm in enumerate(binary_output):
+                    rle = encode_mask_to_rle(segm.cpu().numpy())
+                    rles.append(rle)
+                    filename_and_class.append(f"{class_name}_{dataset.image_files[image_idx]}")
+
+            # 최종 결과 저장
+            save_results(cfg, filename_and_class, rles)
+
+
+# 메인 함수
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--config", type=str, default="soft_voting_setting.yaml")
-
+    parser.add_argument("--config", type=str, default="configs/soft_voting_setting.yaml")
     args = parser.parse_args()
-    
-    with open(args.config, 'r') as f:
-        cfg = OmegaConf.load(f)
 
-    if cfg.root_path not in sys.path:
-        sys.path.append(cfg.root_path)
-    
+    cfg = OmegaConf.load(args.config)
     soft_voting(cfg)
