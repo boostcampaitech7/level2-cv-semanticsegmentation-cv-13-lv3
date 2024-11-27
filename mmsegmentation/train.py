@@ -22,7 +22,7 @@ from tools.train import parse_args
 from test import test, disable_wandb
 
 def set_xraydataset(config):
-    TRAIN_DATA_DIR = 'data/train'
+    TRAIN_DATA_DIR = 'from_CVAT3/train'
 
     image_root = osp.join(TRAIN_DATA_DIR, 'DCM')
     label_root = osp.join(TRAIN_DATA_DIR, 'outputs_json')
