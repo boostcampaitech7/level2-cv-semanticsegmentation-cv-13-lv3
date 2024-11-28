@@ -3,10 +3,6 @@ import numpy as np
 import inspect
 
 def uniform_soup(model, paths, device="cpu", by_name=False):
-    """
-    Uniform Soup 앙상블 구현.
-    모든 가중치를 균등하게 평균하여 모델에 로드.
-    """
     if not isinstance(paths, list):
         paths = [paths]
 
@@ -30,12 +26,33 @@ def uniform_soup(model, paths, device="cpu", by_name=False):
     model.load_state_dict(model_dict)
     return model
 
+def greedy_soup_weights(paths, device="cpu"):
+    combined_weights = None
+    for path in paths:
+        print(f"Loading checkpoint: {path}")
+        try:
+            checkpoint = torch.load(path, map_location=device)
+            if "state_dict" in checkpoint:
+                weights = checkpoint["state_dict"]
+            else:
+                weights = checkpoint
+        except ModuleNotFoundError:
+            print(f"ModuleNotFoundError: Ignoring class definition issues in {path}.")
+            checkpoint = torch.load(path, map_location=device)
+            weights = checkpoint.get("state_dict", checkpoint)
+        
+        if combined_weights is None:
+            combined_weights = {k: v.clone() for k, v in weights.items()}
+        else:
+            for key in combined_weights:
+                combined_weights[key] += weights[key]
+
+    for key in combined_weights:
+        combined_weights[key] /= len(paths)
+
+    return combined_weights
 
 def greedy_soup(model, paths, data, metric, device="cpu", update_greedy=False, compare=np.greater_equal, by_name=False):
-    """
-    Greedy Soup 앙상블 구현.
-    최적의 가중치를 점진적으로 추가하여 앙상블 조합 생성.
-    """
     if not isinstance(paths, list):
         paths = [paths]
 

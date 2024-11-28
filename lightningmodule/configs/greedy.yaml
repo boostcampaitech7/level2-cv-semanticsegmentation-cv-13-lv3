@@ -1,0 +1,20 @@
+checkpoint_dir: /data/ephemeral/home/bohyun/checkpoints
+ensemble_method: greedy_soup  
+output_file: greedy_soup_best.pt 
+
+# 모델 설정
+model:
+  architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
+  encoder_name: efficientnet-b7
+  encoder_weight: imagenet
+  learning_rate: 0.001  # <-- 추가
+
+# 데이터 경로
+dataset:
+  data_path: /data/ephemeral/home/from_CVAT3/train
+  batch_size: 4
+  num_workers: 8
+
+# 기타 설정
+lr: 1e-3
+input_size: 1024
