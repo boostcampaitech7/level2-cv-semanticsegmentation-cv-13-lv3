@@ -1,0 +1,38 @@
+checkpoint_dir: ./checkpoints
+checkpoint_file: SAM2Unet_palm
+resume_checkpoint_suffix: -latest  # Resume 전용 체크포인트 접미사: -latest, -bestEp_00, None, ...
+project_name: Last_Dance_palm
+
+#----------------------------------#
+run_name: Palm_unet_hrnet
+
+architecture: Unet++                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
+encoder_name: tu-hrnet_w64
+encoder_weight: imagenet
+
+seed: 42
+
+batch_size: 2
+num_workers: 4
+
+lr: 1e-3
+
+input_size: 1024
+max_epoch: 100
+valid_interval: 100
+  
+amp: False
+
+use_cp: False
+cp_args:
+ - Trapezium
+ - Capitate
+ - Lunate 
+ - Scaphoid 
+ - finger-1 
+ - finger-16 
+ - Pisiform 
+ - Hamate 
+ - Triquetrum
+
+standard_csv_path: upernet_hrnet_standard_output.csv
