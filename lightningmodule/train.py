@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 from xraydataset import XRayDataset, split_data
 from snapmix import SnapMixDataset
 from utils import get_sorted_files_by_type, set_seed, Gsheet_param
-from constants import PALM_TRAIN_DATA_DIR
+from constants import PALM_TRAIN_DATA_DIR, TRAIN_DATA_DIR
 from argparse import ArgumentParser, Namespace
 import albumentations as A
 import os
@@ -75,8 +75,8 @@ def train_model(args):
     )
 
     # 데이터 로드
-    image_root = os.path.join(PALM_TRAIN_DATA_DIR, 'DCM')
-    label_root = os.path.join(PALM_TRAIN_DATA_DIR, 'outputs_json')
+    image_root = os.path.join(TRAIN_DATA_DIR, 'DCM')
+    label_root = os.path.join(TRAIN_DATA_DIR, 'outputs_json')
     pngs = get_sorted_files_by_type(image_root, 'png')
     jsons = get_sorted_files_by_type(label_root, 'json')
     
