@@ -1,12 +1,10 @@
-from constants import CLASSES
+from constants import PALM_CLASSES
 
 import segmentation_models_pytorch as smp
 
 def load_model(architecture, encoder_name, encoder_weight):
-
     model_architectures = {
         "Unet": smp.Unet,
-        "Unet++": smp.UnetPlusPlus,
         "UperNet": smp.UPerNet,
         "DeepLabV3": smp.DeepLabV3,
         "DeepLabV3Plus": smp.DeepLabV3Plus,
@@ -24,5 +22,5 @@ def load_model(architecture, encoder_name, encoder_weight):
         encoder_name=encoder_name, # choose encoder, e.g. mobilenet_v2 or efficientnet-b7
         encoder_weights=encoder_weight,     # use `imagenet` pre-trained weights for encoder initialization
         in_channels=3,                  # model input channels (1 for gray-scale images, 3 for RGB, etc.)
-        classes=len(CLASSES),                     # model output channels (number of classes in your dataset)
+        classes=len(PALM_CLASSES),                     # model output channels (number of classes in your dataset)
     )

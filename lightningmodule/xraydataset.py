@@ -152,8 +152,10 @@ class XRayDataset(Dataset):
             self.class_minmax.append({'max': new_max, 'min': new_min})
         
         return image, label   
+    
     def __len__(self):
         return len(self.image_files)
+    
     def __getitem__(self, item):
         
         if self.use_cp:
@@ -163,12 +165,15 @@ class XRayDataset(Dataset):
         image_path = self.image_files[item]
         image_name = os.path.basename(image_path)
         image = cv2.imread(image_path).astype(np.float32)
+        
         if self.label_files:
             label_path = self.label_files[item]
             label_shape = tuple(image.shape[:2]) + (len(CLASSES), )
             label = np.zeros(label_shape, dtype=np.uint8)
+            
             with open(label_path, "r") as f:
                 annotations = json.load(f)["annotations"]
+                
             for ann in annotations:
                 c = ann["label"]
                 class_ind = CLASS2IND[c]
@@ -179,16 +184,11 @@ class XRayDataset(Dataset):
                 
                 if self.use_cp:
                     self.mask_points[class_ind]=points
-                    self.class_minmax[class_ind]=self.get_coord(points)
-                
+                    self.class_minmax[class_ind]=self.get_coord(points) 
         else:
             # No labels for test set
             label = np.zeros((len(CLASSES), *image.shape[:2]), dtype=np.uint8)
            
-        if self.use_cp:    
-            for cp_class in self.cp_args:      
-                image, label = self.copypaste(image, label, cp_class)
-            
         if self.transforms:
             inputs = {"image": image, "mask": label} if self.label_files else {"image": image}
             result = self.transforms(**inputs)

@@ -1,0 +1,83 @@
+checkpoint_dir: ./checkpoints
+checkpoint_file: UNet++_hrnet_w64_cropped-bestEp_98
+resume_checkpoint_suffix: -latest  # Resume 전용 체크포인트 접미사: -latest, -bestEp_00, None, ...
+project_name: Last_Dance_palm
+
+#----------------------------------#
+run_name: Palm_unet_hrnet
+
+architecture: Unet++                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
+encoder_name: tu-hrnet_w64
+encoder_weight: imagenet
+
+seed: 42
+
+batch_size: 8
+num_workers: 8
+
+lr: 1e-3
+
+input_size: 1024
+max_epoch: 100
+valid_interval: 100
+  
+amp: False
+
+use_cp: False
+cp_args:
+ - Trapezium
+ - Capitate
+ - Lunate 
+ - Scaphoid 
+ - finger-1 
+ - finger-16 
+ - Pisiform 
+ - Hamate 
+ - Triquetrum
+
+standard_csv_path: upernet_hrnet_standard_output.csv
+
+smp_model_paths:
+  - "hand/standard-UperNet-effb7-final.pt"
+  - "hand/UNet++-hrnet_standard-final.pt"
+  - "hand/UPerNet_hrnet_standard-final.pt"
+
+palm_model_paths:
+  - "palm/DeepLabV3Plus_efficient-b7_cropped-final.pt"
+  - "palm/UNet++_hrnet_w64_cropped-bestEp_98-final.pt"
+  - "palm/UperNet-tu-hrnet_w64-final_cropped.pt"
+
+model_weights:
+  - 0.7   # palm
+  - 0.3   # general
+
+class_thresholds:
+  - 0.5   # finger-1
+  - 0.5   # finger-2
+  - 0.5   # finger-3
+  - 0.5   # finger-4
+  - 0.5   # finger-5
+  - 0.5   # finger-6
+  - 0.5   # finger-7
+  - 0.5   # finger-8
+  - 0.5   # finger-9
+  - 0.5   # finger-10
+  - 0.5   # finger-11
+  - 0.5   # finger-12
+  - 0.5   # finger-13
+  - 0.5   # finger-14
+  - 0.5   # finger-15
+  - 0.5   # finger-16
+  - 0.5   # finger-17
+  - 0.5   # finger-18
+  - 0.5   # finger-19
+  - 0.5   # Trapezium
+  - 0.5   # Trapezoid
+  - 0.5   # Capitate
+  - 0.5   # Hamate
+  - 0.5   # Scaphoid
+  - 0.5   # Lunate
+  - 0.5   # Triquetrum
+  - 0.5   # Pisiform
+  - 0.5   # Radius
+  - 0.5   # Ulna

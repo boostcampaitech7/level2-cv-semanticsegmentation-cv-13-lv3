@@ -34,18 +34,17 @@ from augmentation import load_transforms
 from omegaconf import OmegaConf
 from argparse import ArgumentParser
 
-from augmentation import CopyPasteDataset
+# from augmentation import CopyPasteDataset
 
 def create_pred_mask_dict(csv_path, input_size):
     df = pd.read_csv(csv_path)
-
     mask_dict = dict()
-
     # 그룹화하여 처리
     grouped = df.groupby('image_name')
-    for image_name, group in grouped:
+    for idx, (image_name, group) in enumerate(grouped):
         print(f'creating mask for {image_name}...')
         masks = dict()
+        mask_test = []
         for _, row in group.iterrows():
             classname = row['class']
             rle = row['rle']
@@ -53,7 +52,9 @@ def create_pred_mask_dict(csv_path, input_size):
                 mask = decode_rle_to_mask(rle, 2048, 2048)
                 mask_resized = np.array(Image.fromarray(mask).resize((input_size, input_size)))
                 masks[classname]=mask_resized
-
+                mask_test.append(mask_resized)
+        img = Image.fromarray(label2rgb(np.array(mask_test)))
+        img.save(image_name)
         mask_dict[image_name] = masks
     print('mask creation from csv is done')
     return mask_dict
@@ -78,19 +79,17 @@ def visualize_compare(args, visual_loader, mask_dict):
     
     # Define your class groups
     class_groups = [
-        [1, 4, 8, 12, 16, 20, 22, 26],  # finger-1, finger-4, finger-8, etc.
-        [2, 5, 9, 13, 17, 23, 24, 29],  # finger-2, finger-5, finger-9, etc.
-        [3, 6, 10, 14, 18, 21, 27, 28],  # finger-11, finger-15
-        [11, 19, 25],  # finger-19
-        [7, 15]
+        [4, 5, 6],  # finger-1, finger-4, finger-8, etc.
+        [1, 2],  # finger-2, finger-5, finger-9, etc.
+        [7, 8],  # finger-11, finger-15
+        [3]  # finger-19
     ]
 
     class_group_label = [
         'Trapezium, Capitate, Triquetrum',
         'Hamate, Scaphoid, Ulna',
         'Trapezoid, Pisiform, Radius',
-        '11, 19, Lunate',
-        '7, 15'
+        'Lunate'
     ]
 
     class_labels = []
@@ -113,6 +112,8 @@ def visualize_compare(args, visual_loader, mask_dict):
                 pred = None
                 if csv_compare:
                     pred = mask_dict.get(image_name, None)
+                    
+                print(pred)
 
                 # Initialize the mask array
                 if args.gt:

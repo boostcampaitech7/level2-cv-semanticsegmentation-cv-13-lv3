@@ -28,10 +28,8 @@ class SegmentationModel(LightningModule):
 
         self.save_hyperparameters()
 
-
     def forward(self, x):
         return self.model(x)
-
 
     def training_step(self, batch, batch_idx):
         _, images, masks = batch
@@ -45,7 +43,6 @@ class SegmentationModel(LightningModule):
         # 손실 로깅
         self.log('train/loss', loss, on_step=True, on_epoch=False)
         return loss
-
 
     def validation_step(self, batch, batch_idx):
         _, images, masks = batch
@@ -66,7 +63,6 @@ class SegmentationModel(LightningModule):
         self.validation_dices.append(dice)  # dice score 저장
         return dice
 
-
     def on_validation_epoch_end(self):
         dices = torch.cat(self.validation_dices, 0)
         dices_per_class = torch.mean(dices, 0)
@@ -81,16 +77,12 @@ class SegmentationModel(LightningModule):
             self.best_epoch = self.current_epoch  # Best Epoch 갱신
             print(f"Best performance improved: {self.best_dice:.4f} at Epoch: {self.best_epoch}")
             
-        # WandB에 현재 Best Epoch 기록
-        #self.log('best_epoch', self.best_epoch, logger=True)
-
         # Log Dice scores per class using WandB logger
         dice_scores_dict = {'val/' + c: d.item() for c, d in zip(CLASSES, dices_per_class)}
         self.log_dict(dice_scores_dict, on_epoch=True, logger=True)  # Log to WandB at the end of each epoch
 
         # 에폭이 끝나면 validation_dices 초기화
         self.validation_dices.clear()
-
 
     def test_step(self, batch, batch_idx):
         image_names, images = batch
@@ -108,7 +100,6 @@ class SegmentationModel(LightningModule):
                 self.rles.append(rle)
                 self.filename_and_class.append(f"{IND2CLASS[c]}_{image_name}")
 
-
     def on_test_epoch_end(self):
         # 클래스 및 파일 이름 분리
         classes, filename = zip(*[x.split("_") for x in self.filename_and_class])
@@ -121,12 +112,10 @@ class SegmentationModel(LightningModule):
             "rle": self.rles,
         })
         df.to_csv("output.csv", index=False)
-        print("Test results saved to output.csv")
-        
+        print("Test results saved to output.csv") 
         
     def on_train_epoch_end(self):
         self.log('epoch', self.current_epoch)  # 에폭 번호를 로그로 기록
-
 
     def configure_optimizers(self):  
         # Optimizer 정의
@@ -135,4 +124,3 @@ class SegmentationModel(LightningModule):
         
         # 옵티마이저와 스케줄러 반환
         return [optimizer], [scheduler]
-    
