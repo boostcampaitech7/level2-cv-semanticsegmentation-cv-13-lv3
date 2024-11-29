@@ -76,50 +76,50 @@ Bone Segmentation은 인공지능 분야에서 중요한 응용 분야 중 하�
 
 ## 💻 Development Environment
 
-- GPU : 
-- 개발 언어: 
-- 프레임워크: Pytorch, Numpy
-- 협업 툴: 
+- GPU : Tesla V100-SXM2-32GB
+- 개발 언어: Python
+- 프레임워크: Pytorch, Numpy, Pytorch Lightning, MMSegmentation
+- 협업 툴: Github, Slack, Zoom
 
 
 </br>
 
-# 📊 Project
-## 🔎 EDA
-
-🚧 Work in Progress
-
-
-> ### Dataset
-🚧 Work in Progress
-
-> ### Noisiy Images
-🚧 Work in Progress
-
-
-<br>
-
-## 🔬 Methods
-
-
-> ### Augmentation
- 
-🚧 Work in Progress
-
- 데이터 증강 기법 | 설명 | 효과 |
-| --- | --- | --- |
-| **Resize** | 🚧 Work in Progress |
-| **Color Jitter** | 🚧 Work in Progress |
-| **Sharpen** | 🚧 Work in Progress |
-| **Random Brightness Contrast** | 🚧 Work in Progress |
-| **Gaussian Noise** | 🚧 Work in Progress |
-| **Elastic Transform** | 🚧 Work in Progress |
-
-> ### TTA
-🚧 Work in Progress
-- **배치 크기 조정**: 🚧 Work in Progress
-- **임계값 변화**: 🚧 Work in Progress
-
+# Usage
+## Pytorch Lightning
+1. constants.py 파일 경로 수정
+  - 학습에 필요한 데이터셋 디렉토리 경로를 constants.py 파일에서 설정합니다
+2. configs에서 설정 파일 작성
+  - SMP 라이브러리를 사용하려면 lightningmodule/configs 디렉토리 내에서 적절한 config 파일을 작성합니다.
+3. 학습 실행 명령어
+  - 전체 데이터셋 학습
+    ```
+    python train.py
+    ```
+  - 검증 포함 학습 (Group K-Fold 방식 사용)
+    ```
+    python train.py --validation
+    ```
+  - 특정 config 파일 사용
+    ```
+    python train.py --config "path_to_config_file"
+    ```
+4. 테스트(Test)
+  - Checkpoint 파일로 추론
+    ```
+    python test.py
+    ```
+  - PT 파일로 추론
+    ```
+    python test.py --pt
+    ```
+  - 손바닥 Crop 데이터셋을 사용한 모델 추론
+    ```
+    python test.py --palm
+    ```
+  - 앙상블 추론
+    ```
+    python test.py --ensemble
+    ```
 
 <br><br>
 
