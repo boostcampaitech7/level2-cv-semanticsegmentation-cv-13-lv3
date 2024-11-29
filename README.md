@@ -134,7 +134,3 @@ Bone Segmentation은 인공지능 분야에서 중요한 응용 분야 중 하�
 | **HRNet**    | 다양한 해상도에서 이미지를 병렬로 처리하며, 해상도 간 정보 교환을 통한 세밀한 세그멘테이션 달성.    | mmsegmentation             |
 
 <br><br>
-
-# 📋 Conclusion
-
-🚧 Work in Progress
