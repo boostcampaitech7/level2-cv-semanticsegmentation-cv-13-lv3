@@ -18,7 +18,6 @@ class SegmentationModel_ensemble(SegmentationModel_palm):
         super().__init__()
         self.model_weights = torch.tensor(model_weights)
         self.thresholds = torch.tensor(thresholds)
-        #self.model = self.load_model(architecture, encoder_name, encoder_weight)
         self.palm_crop_info = None
         if gt_csv is not None:
             self.palm_crop_info = self.get_palm_box(gt_csv)

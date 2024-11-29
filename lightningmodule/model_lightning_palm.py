@@ -105,7 +105,7 @@ def restore_to_original_sizes(predictions, original_sizes, crop_offsets, pad_off
             predictions[i].unsqueeze(0), size=(orig_H, orig_W), mode="bilinear", align_corners=False
         ).squeeze(0)
 
-                # Determine the position in the target canvas
+        # Determine the position in the target canvas
         crop_x, crop_y = crop_offsets[i]
         pad_x, pad_y = pad_offsets[i]
 
@@ -133,7 +133,6 @@ class SegmentationModel_palm(SegmentationModel):
 
     def __init__(self, gt_csv=None, architecture="UperNet", encoder_name="efficientnet-b7", encoder_weight="imagenet"):
         super().__init__(architecture=architecture, encoder_name=encoder_name, encoder_weight=encoder_weight)
-        #self.model = self.load_model(architecture, encoder_name, encoder_weight)
         self.palm_crop_info = None
         if gt_csv is not None:
             self.palm_crop_info = self.get_palm_box(gt_csv)
