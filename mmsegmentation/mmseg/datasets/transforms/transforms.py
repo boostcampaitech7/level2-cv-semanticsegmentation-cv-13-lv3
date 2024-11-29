@@ -1081,22 +1081,32 @@ class Resize(MMCV_Resize):
 
     def _resize_seg(self, results: dict) -> None:
         """Resize semantic segmentation map with ``results['scale']``."""
-        for seg_key in results.get('seg_fields', []):
-            if results.get(seg_key, None) is not None:
+        gt_seg_maps = results.get('get_seg_map', None)
+        if gt_seg_maps:
+            resized_label = np.zeros(results['scale'],results['scale'], gt_seg_maps.shape[-1], dtype=gt_seg_maps.dtype)
+            
+            for class_ind in range(gt_seg_maps.shape[-1]):
+            # Extract the mask for the current class
+                class_mask = gt_seg_maps[..., class_ind]
+                
+                # Resize the mask
                 if self.keep_ratio:
-                    gt_seg = mmcv.imrescale(
-                        results[seg_key],
+                    class_mask = mmcv.imrescale(
+                        class_mask,
                         results['scale'],
                         interpolation='nearest',
                         backend=self.backend)
                 else:
-                    gt_seg = mmcv.imresize(
-                        results[seg_key],
+                    class_mask = mmcv.imresize(
+                        class_mask,
                         results['scale'],
                         interpolation='nearest',
                         backend=self.backend)
-                results[seg_key] = gt_seg
-
+                    
+                resized_label[..., class_ind] = class_mask
+                
+            # Store the resized mask back in the resized_label array
+            results['gt_seg_map'] = resized_label
 
 @TRANSFORMS.register_module()
 class RandomMosaic(BaseTransform):

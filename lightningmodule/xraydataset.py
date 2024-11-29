@@ -46,7 +46,7 @@ def split_data(pngs, jsons, K=5, valid_idx=5):
     return train_datalist, valid_datalist
 
 class XRayDataset(Dataset):
-    def __init__(self, image_files, label_files=None, transforms=None, use_cp=True, cp_args=None):
+    def __init__(self, image_files, label_files=None, transforms=None, use_cp=False, cp_args=None):
         """
         image_files : list of image file paths
         label_files : list of label file paths (None for test sets)

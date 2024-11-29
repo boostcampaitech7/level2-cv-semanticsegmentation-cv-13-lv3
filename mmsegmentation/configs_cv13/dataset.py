@@ -3,28 +3,30 @@ dataset_type = 'XRayDataset'
 train_pipeline = [
             dict(type='LoadImageFromFile'),
             dict(type='LoadXRayAnnotations'),
-            dict(type='Resize', scale=(512, 512)),
+            dict(type='Resize', scale=(1024, 1024)),
             dict(type='TransposeAnnotations'),
+        # CLAHE 변환 (Albumentations 활용)
+            dict(type='CLAHE', clip_limit=4.0, tile_grid_size=(4, 4)),
             dict(type='PackSegInputs')
         ]
 
 valid_pipeline = [
             dict(type='LoadImageFromFile'),
             dict(type='LoadXRayAnnotations'),
-            dict(type='Resize', scale=(512, 512)),
+            dict(type='Resize', scale=(1024, 1024)),
             dict(type='TransposeAnnotations'),
             dict(type='PackSegInputs')
         ]
 
 test_pipeline = [
             dict(type='LoadImageFromFile'),
-            dict(type='Resize', scale=(512, 512)),
+            dict(type='Resize', scale=(1024, 1024)),
             dict(type='PackSegInputs')
         ]
 
 train_dataloader = dict(
     batch_size=1,
-    num_workers=1,
+    num_workers=2,
     persistent_workers=True,
     sampler=dict(type='InfiniteSampler', shuffle=True),
     dataset=dict(

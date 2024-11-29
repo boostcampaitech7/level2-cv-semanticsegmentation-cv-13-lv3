@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from sam2.build_sam import build_sam2
+from constants import PALM_CLASSES
 
 
 class DoubleConv(nn.Module):

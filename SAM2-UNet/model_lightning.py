@@ -1,6 +1,7 @@
 from constants import CLASSES, IND2CLASS
 
 import torch
+import torch.optim as optim
 import torch.nn.functional as F
 from torch import nn
 from lightning import LightningModule
@@ -130,12 +131,15 @@ class SegmentationModel(LightningModule):
             "class": classes,
             "rle": self.rles,
         })
-        output_path = "output_test.csv"
+        output_path = "output_test_1.csv"
         df.to_csv(output_path, index=False)
         print(f"Test results saved to {output_path}")
 
 
     def configure_optimizers(self):
-        optimizer = torch.optim.Adam(self.parameters(), lr=self.lr)
+        # Optimizer 정의
+        optimizer = optim.AdamW(params=self.model.parameters(), lr=self.lr, weight_decay=1e-4)
+        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=100, eta_min=1e-5)
         
-        return optimizer
+        # 옵티마이저와 스케줄러 반환
+        return [optimizer], [scheduler]
