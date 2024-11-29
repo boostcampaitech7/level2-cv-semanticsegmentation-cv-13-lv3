@@ -87,36 +87,36 @@ Bone Segmentation은 인공지능 분야에서 중요한 응용 분야 중 하�
 # Usage
 ## Pytorch Lightning
 1. constants.py 파일 경로 수정
-  - 학습에 필요한 데이터셋 디렉토리 경로를 constants.py 파일에서 설정합니다
+학습에 필요한 데이터셋 디렉토리 경로를 constants.py 파일에서 설정합니다
 2. configs에서 설정 파일 작성
-  - SMP 라이브러리를 사용하려면 lightningmodule/configs 디렉토리 내에서 적절한 config 파일을 작성합니다.
+SMP 라이브러리를 사용하려면 lightningmodule/configs 디렉토리 내에서 적절한 config 파일을 작성합니다.
 3. 학습 실행 명령어
-  - 전체 데이터셋 학습
+전체 데이터셋 학습
     ```
     python train.py
     ```
-  - 검증 포함 학습 (Group K-Fold 방식 사용)
+검증 포함 학습 (Group K-Fold 방식 사용)
     ```
     python train.py --validation
     ```
-  - 특정 config 파일 사용
+특정 config 파일 사용
     ```
     python train.py --config "path_to_config_file"
     ```
 4. 테스트(Test)
-  - Checkpoint 파일로 추론
+Checkpoint 파일로 추론
     ```
     python test.py
     ```
-  - PT 파일로 추론
+PT 파일로 추론
     ```
     python test.py --pt
     ```
-  - 손바닥 Crop 데이터셋을 사용한 모델 추론
+손바닥 Crop 데이터셋을 사용한 모델 추론
     ```
     python test.py --palm
     ```
-  - 앙상블 추론
+앙상블 추론
     ```
     python test.py --ensemble
     ```
