@@ -18,9 +18,6 @@ from mmengine.runner import Runner
 
 from omegaconf import OmegaConf
 
-from tools.test import trigger_visualization_hook
-
-
 def set_xraydataset(args, config):
 
     image_files = None
