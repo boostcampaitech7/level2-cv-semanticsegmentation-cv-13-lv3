@@ -1,4 +1,4 @@
-from constants import CLASSES, IND2CLASS, PALM_CLASSES
+from constants import CLASSES, IND2CLASS
 
 import torch
 import torch.optim as optim
@@ -12,8 +12,9 @@ import pandas as pd
 from model import load_model
 
 class SegmentationModel(LightningModule):
-    def __init__(self, criterion = None, learning_rate = None, thr=0.5, architecture="UperNet", encoder_name="efficientnet-b7", encoder_weight="imagenet"):
+    def __init__(self, criterion, learning_rate, thr=0.5, architecture="Unet", encoder_name="resnet50", encoder_weight="imagenet"):
         super(SegmentationModel, self).__init__()
+        self.save_hyperparameters(ignore=['criterion'])  # criterion은 제외
         self.model = load_model(architecture, encoder_name, encoder_weight)
         self.criterion = criterion
         self.lr = learning_rate
@@ -24,6 +25,8 @@ class SegmentationModel(LightningModule):
 
         self.rles = []
         self.filename_and_class = []
+
+        self.save_hyperparameters()
 
     def forward(self, x):
         return self.model(x)
@@ -73,9 +76,9 @@ class SegmentationModel(LightningModule):
             self.best_dice = avg_dice
             self.best_epoch = self.current_epoch  # Best Epoch 갱신
             print(f"Best performance improved: {self.best_dice:.4f} at Epoch: {self.best_epoch}")
-
+            
         # Log Dice scores per class using WandB logger
-        dice_scores_dict = {'val/' + c: d.item() for c, d in zip(PALM_CLASSES, dices_per_class)}
+        dice_scores_dict = {'val/' + c: d.item() for c, d in zip(CLASSES, dices_per_class)}
         self.log_dict(dice_scores_dict, on_epoch=True, logger=True)  # Log to WandB at the end of each epoch
 
         # 에폭이 끝나면 validation_dices 초기화
@@ -86,7 +89,7 @@ class SegmentationModel(LightningModule):
         outputs = self(images)
 
         # 크기 보정
-        outputs = F.interpolate(outputs, size=(1024, 1024), mode="bilinear")
+        outputs = F.interpolate(outputs, size=(2048, 2048), mode="bilinear")
         outputs = torch.sigmoid(outputs)
         outputs = (outputs > self.thr).detach().cpu().numpy()
 
@@ -109,7 +112,7 @@ class SegmentationModel(LightningModule):
             "rle": self.rles,
         })
         df.to_csv("output.csv", index=False)
-        print("Test results saved to output.csv")
+        print("Test results saved to output.csv") 
         
     def on_train_epoch_end(self):
         self.log('epoch', self.current_epoch)  # 에폭 번호를 로그로 기록
@@ -121,4 +124,3 @@ class SegmentationModel(LightningModule):
         
         # 옵티마이저와 스케줄러 반환
         return [optimizer], [scheduler]
-    
