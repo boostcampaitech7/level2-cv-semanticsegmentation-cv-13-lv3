@@ -1,20 +1,41 @@
-checkpoint_dir: ./checkpoints/test5
-checkpoint_file: SAM2Unet_test
+checkpoint_dir: ./checkpoints
+checkpoint_file: SAM2Unet
+# checkpoint_file: DeepLabV3Plus_efficient-b7_cropped
 resume_checkpoint_suffix: -latest  # Resume 전용 체크포인트 접미사: -latest, -bestEp_00, None, ...
-project_name: SAM2Unet_test
+project_name: Last_Dance
 
 #----------------------------------#
-run_name: test 5
+run_name: copy_paste
+
+architecture: UperNet                # "Unet", "UperNet", "DeepLabV3", "DeepLabV3Plus", "PSPNet", "FPN", "Linknet", "Pan", "MAnet"
+encoder_name: efficientnet-b7
+encoder_weight: imagenet
 
 seed: 42
 
-batch_size: 4
+batch_size: 2
 num_workers: 4
 
-learning_rate: 1e-4
+lr: 1e-3
 
-max_epoch: 100
 input_size: 1024
-valid_interval: 5
+max_epoch: 100
+valid_interval: 100
+  
+amp: False
 
-amp: True
+use_cp: True
+cp_args:
+ - Trapezium
+ - Capitate
+ - Lunate 
+ - Scaphoid 
+ - finger-1 
+ - finger-16 
+ - Pisiform 
+ - Hamate 
+ - Triquetrum
+
+#standard_csv_path: "./crop_data.csv"
+standard_csv_path: "/data/ephemeral/home/kjh/level2-cv-semanticsegmentation-cv-13-lv3/ensemble/checkpoint/csv/palm/fisrt_palm.csv"
+valid: false

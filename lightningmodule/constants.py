@@ -6,14 +6,19 @@ CLASSES = [
     'Trapezoid', 'Capitate', 'Hamate', 'Scaphoid', 'Lunate',
     'Triquetrum', 'Pisiform', 'Radius', 'Ulna',
 ]
-PALM_CLASSES =  ['Hamate', 'Scaphoid', 'Lunate', 'Trapezium', 'Capitate', 'Triquetrum', 'Trapezoid', 'Pisiform']
 CLASS2IND = {v: i for i, v in enumerate(CLASSES)}
 IND2CLASS = {v: k for k, v in CLASS2IND.items()}
 
 TRAIN_DATA_DIR = '/data/ephemeral/home/from_CVAT3/train'
 TEST_DATA_DIR = '/data/ephemeral/home/data/test'
 
+PALM_CLASSES =  ['Hamate', 'Scaphoid', 'Lunate', 'Trapezium', 'Capitate', 'Triquetrum', 'Trapezoid', 'Pisiform']
+PALM_CLASS2IND = {v: i for i, v in enumerate(PALM_CLASSES)}
+PALM_IND2CLASS = {v: k for k, v in PALM_CLASS2IND.items()}
+
 PALM_TRAIN_DATA_DIR = '/data/ephemeral/home/data/train_crop'
+PALM_TEST_DATA_DIR = '/data/ephemeral/home/data/test'
+
 # Color palette for visualization
 PALM_PALETTE = [
     (174, 57, 255), (199, 100, 0), (72, 0, 118), (255, 179, 240),
