@@ -28,9 +28,7 @@ def Gsheet_param(cfg):
     env = dotenv_values(env_path)
 
     # 서비스 연결
-
     gc = gspread.service_account(env['JSON_PATH'])
-
 
     # url에 따른 spread sheet 열기
     doc = gc.open_by_url(env['URL'])
@@ -46,8 +44,7 @@ def Gsheet_param(cfg):
 
             pass
         else :
-            param_dict[key] = str(value)
-            
+            param_dict[key] = str(value)     
 
     # sheet에 추가하기 위해서 값들을 list로 저장
     params = [param_dict[k] for k in param_dict]
@@ -157,7 +154,6 @@ def get_sorted_files_by_type(path,file_type='json'):
     return files
 
 # mask map으로 나오는 인퍼런스 결과를 RLE로 인코딩 합니다.
-
 def encode_mask_to_rle(mask):
     '''
     mask: numpy array binary mask 

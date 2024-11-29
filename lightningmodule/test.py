@@ -9,16 +9,38 @@ import os
 import torch
 from model_lightning import SegmentationModel
 from model_lightning_palm import SegmentationModel_palm
+from model_lightning_ensemble import SegmentationModel_ensemble
 from lightning.pytorch import Trainer
 import numpy as np
 from omegaconf import OmegaConf
 
+def get_models(args, path_list):
+    models = []
+    if args.pt:
+        for path in path_list:
+            pt_path = os.path.join(args.checkpoint_dir, f"{path}")
+            print(pt_path)
+            model = torch.load(pt_path)  # 전체 모델 저장된 경우
+            models.append(model)    
+            
+    return models
+
 # 테스트를 수행하는 함수
 def test_model(args):
-
     if args.pt:
-        pt_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}-final.pt")
-        seg_model = torch.load(pt_path)  # 전체 모델 저장된 경우
+        if args.ensemble:
+            palm_models = get_models(args, args.palm_model_paths)
+            general_models = get_models(args, args.smp_model_paths)
+            seg_model = SegmentationModel_ensemble(gt_csv=args.standard_csv_path, model_weights=args.model_weights, thresholds=args.class_thresholds)
+            seg_model.set_model(palm_models, general_models)
+        else:
+            pt_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}-final.pt")
+            model = torch.load(pt_path)  # 전체 모델 저장된 경우
+            if args.palm:
+                seg_model = SegmentationModel_palm(gt_csv=args.standard_csv_path)
+                seg_model.set_model(model)
+            else:
+                seg_model = model
     else:
         # 모델 및 체크포인트 경로 설정
         if args.resume_checkpoint_suffix == None:
@@ -27,10 +49,8 @@ def test_model(args):
             checkpoint_path = os.path.join(args.checkpoint_dir, f"{args.checkpoint_file}{args.resume_checkpoint_suffix}.ckpt")
         seg_model = SegmentationModel.load_from_checkpoint(checkpoint_path=checkpoint_path, criterion=None, learning_rate=None)
 
-
     image_files = None
     if args.valid:
-
         image_root = os.path.join(TRAIN_DATA_DIR, 'DCM')
         label_root = os.path.join(TRAIN_DATA_DIR, 'outputs_json')
 
@@ -69,6 +89,8 @@ if __name__ == '__main__':
     parser = ArgumentParser()
     parser.add_argument("--config", type=str, default="configs/base_config.yaml")
     parser.add_argument("--pt", action="store_true", help="pt 파일 test 실행")
+    parser.add_argument("--palm", action="store_true", help="palm 모델 test 실행")
+    parser.add_argument("--ensemble", action="store_true", help="ensemble 모델 test 실행")
     
     args = parser.parse_args()
     

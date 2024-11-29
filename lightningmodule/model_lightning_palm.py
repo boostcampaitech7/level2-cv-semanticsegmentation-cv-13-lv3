@@ -1,7 +1,6 @@
 from model_lightning import SegmentationModel
 
 import numpy as np
-from PIL import Image
 
 import torch
 import torch.nn.functional as F
@@ -11,8 +10,7 @@ from torchvision.transforms import ToTensor
 
 from utils import encode_mask_to_rle, decode_rle_to_mask, label2rgb
 
-from constants import PALM_CLASSES, PALM_IND2CLASS
-from model_palm import load_model
+from constants import PALM_CLASSES, IND2CLASS
 
 def preprocess_images_batch(images, min_pos, max_pos, inference_size=(1024, 1024)):
     """
@@ -34,7 +32,6 @@ def preprocess_images_batch(images, min_pos, max_pos, inference_size=(1024, 1024
 
     crop_w, crop_h = max_x - min_x, max_y - min_y
     
-
     cropped_images = []
     crop_offsets = []
     original_sizes = []
@@ -132,105 +129,18 @@ def restore_to_original_sizes(predictions, original_sizes, crop_offsets, pad_off
 
     return restored_outputs
 
-def crop_img_by_minmax(image, min_pos, max_pos):
-
-    # 최소 및 최대 x, y 좌표 계산
-    min_x, min_y = min_pos
-    max_x, max_y = max_pos
-    
-    h, w = image.size[1], image.size[0]  
-    crop_w, crop_h = max_x - min_x, max_y - min_y
-    
-    # 이미지 크기에 따라 여백 비율 조정
-    width_margin = int((w - crop_w) * 0.005)  
-    height_margin = int((h - crop_h) * 0.005)  
-
-    # 여백을 포함하여 새로운 크롭 좌표 설정
-    new_min_x = max(0, min_x - width_margin)
-    new_max_x = min(w, max_x + width_margin)
-    new_min_y = max(0, min_y - height_margin)
-    new_max_y = min(h, max_y + height_margin)
-
-    #print(new_min_x, new_max_x, new_min_y, new_max_y)
-
-    # 이미지 크롭
-    image = image.crop([new_min_x, new_min_y, new_max_x, new_max_y])
-
-    return image, (min_x, min_y)
-
-def pad_to_sqaure(image):
-    """
-    이미지의 긴 쪽을 기준으로 짧은 쪽을 패딩하여 정사각형으로 만드는 함수
-    이미지는 가운데 정렬되고 패딩은 양쪽에 균등하게 적용됨
-    
-    Args:
-        image (PIL.Image): 입력 이미지
-        
-    Returns:
-        PIL.Image: 패딩된 정사각형 이미지
-    """
-    # 이미지 크기 가져오기
-    width, height = image.size
-    
-    # 긴 쪽 길이 찾기
-    max_size = max(width, height)
-    
-    # 새로운 이미지 생성 (검은색 배경)
-    padded_image = Image.new('RGB', (max_size, max_size), (0, 0, 0))
-    
-    # 이미지를 가운데 위치시키기 위한 오프셋 계산
-    x_offset = (max_size - width) // 2
-    y_offset = (max_size - height) // 2
-    
-    new_pos = (x_offset, y_offset)
-
-    # 원본 이미지를 가운데에 붙여넣기
-    padded_image.paste(image, new_pos)
-    
-    return padded_image, new_pos
-
-# x, y 만큼의 패딩을 추가하고, 최종적으로 2048x2048로 만들기
-def pad_image_to_target(image, pad, target_size=(2048, 2048)):
-
-    pad_x, pad_y = pad
-
-    # 초기 패딩 추가
-    padded_image = np.pad(
-        image, 
-        ((pad_y, 0), (pad_x, 0)),  # 위쪽 pad_y, 왼쪽 pad_x 추가
-        mode='constant',
-        constant_values=0  # 패딩값은 0
-    )
-    
-    # 목표 크기에 맞춰 오른쪽과 아래쪽에 추가 패딩
-    height, width = padded_image.shape
-    target_height, target_width = target_size
-    
-    if height > target_height or width > target_width:
-        raise ValueError("이미지가 목표 크기를 초과합니다.")
-    
-    bottom_padding = target_height - height
-    right_padding = target_width - width
-    
-    final_padded_image = np.pad(
-        padded_image, 
-        ((0, bottom_padding), (0, right_padding)),  # 아래쪽과 오른쪽 패딩 추가
-        mode='constant',
-        constant_values=0
-    )
-    
-    return final_padded_image
-
-
 class SegmentationModel_palm(SegmentationModel):
 
     def __init__(self, gt_csv=None, architecture="UperNet", encoder_name="efficientnet-b7", encoder_weight="imagenet"):
         super().__init__(architecture=architecture, encoder_name=encoder_name, encoder_weight=encoder_weight)
-        self.model = self.load_model(architecture, encoder_name, encoder_weight)
+        #self.model = self.load_model(architecture, encoder_name, encoder_weight)
         self.palm_crop_info = None
         if gt_csv is not None:
             self.palm_crop_info = self.get_palm_box(gt_csv)
         self.toTensor = ToTensor()
+
+    def set_model(self,model):
+        self.model = model
     
     def get_palm_box(self, csv_path):
         df = pd.read_csv(csv_path)
@@ -307,9 +217,6 @@ class SegmentationModel_palm(SegmentationModel):
                 self.best_epoch = self.current_epoch  # Best Epoch 갱신
                 print(f"Best performance improved: {self.best_dice:.4f} at Epoch: {self.best_epoch}")
                 
-            # WandB에 현재 Best Epoch 기록
-            #self.log('best_epoch', self.best_epoch, logger=True)
-
             # Log Dice scores per class using WandB logger
             dice_scores_dict = {'val/' + c: d.item() for c, d in zip(PALM_CLASSES, dices_per_class)}
             self.log_dict(dice_scores_dict, on_epoch=True, logger=True)  # Log to WandB at the end of each epoch
@@ -334,4 +241,4 @@ class SegmentationModel_palm(SegmentationModel):
             for c, segm in enumerate(output):
                 rle = encode_mask_to_rle(segm)
                 self.rles.append(rle)
-                self.filename_and_class.append(f"{PALM_IND2CLASS[c]}_{image_name}")
+                self.filename_and_class.append(f"{IND2CLASS[c]}_{image_name}")

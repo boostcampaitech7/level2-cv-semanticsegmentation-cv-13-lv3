@@ -20,7 +20,6 @@ def load_model(architecture, encoder_name, encoder_weight):
     if architecture not in model_architectures:
         raise ValueError(f"지원하지 않는 아키텍처입니다. 사용 가능한 아키텍처: {list(model_architectures.keys())}")
 
-
     return model_architectures[architecture](
         encoder_name=encoder_name, # choose encoder, e.g. mobilenet_v2 or efficientnet-b7
         encoder_weights=encoder_weight,     # use `imagenet` pre-trained weights for encoder initialization

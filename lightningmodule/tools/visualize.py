@@ -34,13 +34,11 @@ from augmentation import load_transforms
 from omegaconf import OmegaConf
 from argparse import ArgumentParser
 
-from augmentation import CopyPasteDataset
+# from augmentation import CopyPasteDataset
 
 def create_pred_mask_dict(csv_path, input_size):
     df = pd.read_csv(csv_path)
-
     mask_dict = dict()
-
     # 그룹화하여 처리
     grouped = df.groupby('image_name')
     for idx, (image_name, group) in enumerate(grouped):
@@ -55,10 +53,8 @@ def create_pred_mask_dict(csv_path, input_size):
                 mask_resized = np.array(Image.fromarray(mask).resize((input_size, input_size)))
                 masks[classname]=mask_resized
                 mask_test.append(mask_resized)
-        # img = Image.fromarray(label2rgb(np.array(mask_test)))
-        # img.save(image_name)
-        # if idx > 10:
-        #     break
+        img = Image.fromarray(label2rgb(np.array(mask_test)))
+        img.save(image_name)
         mask_dict[image_name] = masks
     print('mask creation from csv is done')
     return mask_dict

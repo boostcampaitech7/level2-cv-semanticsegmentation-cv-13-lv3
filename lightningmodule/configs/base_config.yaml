@@ -1,5 +1,5 @@
 checkpoint_dir: ./checkpoints
-checkpoint_file: UPerNet_Eff7_cropped-bestEp_98
+checkpoint_file: SAM2Unet_palm
 resume_checkpoint_suffix: -latest  # Resume 전용 체크포인트 접미사: -latest, -bestEp_00, None, ...
 project_name: Last_Dance_palm
 
@@ -12,7 +12,7 @@ encoder_weight: imagenet
 
 seed: 42
 
-batch_size: 3
+batch_size: 2
 num_workers: 4
 
 lr: 1e-3
@@ -34,3 +34,5 @@ cp_args:
  - Pisiform 
  - Hamate 
  - Triquetrum
+
+standard_csv_path: upernet_hrnet_standard_output.csv
